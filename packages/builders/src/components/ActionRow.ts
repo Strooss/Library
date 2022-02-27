@@ -1,23 +1,28 @@
-import { APIActionRowComponent, ComponentType } from 'discord-api-types/v9';
+import { type APIActionRowComponent, ComponentType, APIMessageComponent } from 'discord-api-types/v9';
 import type { ButtonComponent, SelectMenuComponent } from '..';
-import type { Component } from './Component';
+import { Component } from './Component';
 import { createComponent } from './Components';
+import isEqual from 'fast-deep-equal';
 
 export type MessageComponent = ActionRowComponent | ActionRow;
 
 export type ActionRowComponent = ButtonComponent | SelectMenuComponent;
 
 // TODO: Add valid form component types
-
 /**
  * Represents an action row component
  */
-export class ActionRow<T extends ActionRowComponent = ActionRowComponent> implements Component {
-	public readonly components: T[] = [];
-	public readonly type = ComponentType.ActionRow;
+export class ActionRow<T extends ActionRowComponent = ActionRowComponent> extends Component<
+	Omit<Partial<APIActionRowComponent<APIMessageComponent>> & { type: ComponentType.ActionRow }, 'components'>
+> {
+	/**
+	 * The components within this action row
+	 */
+	public readonly components: T[];
 
-	public constructor(data?: APIActionRowComponent) {
-		this.components = (data?.components.map(createComponent) ?? []) as T[];
+	public constructor({ components, ...data }: Partial<APIActionRowComponent<APIMessageComponent>> = {}) {
+		super({ type: ComponentType.ActionRow, ...data });
+		this.components = (components?.map((c) => createComponent(c)) ?? []) as T[];
 	}
 
 	/**
@@ -34,15 +39,25 @@ export class ActionRow<T extends ActionRowComponent = ActionRowComponent> implem
 	 * Sets the components in this action row
 	 * @param components The components to set this row to
 	 */
-	public setComponents(components: T[]) {
-		Reflect.set(this, 'components', [...components]);
+	public setComponents(...components: T[]) {
+		this.components.splice(0, this.components.length, ...components);
 		return this;
 	}
 
-	public toJSON(): APIActionRowComponent {
+	public toJSON(): APIActionRowComponent<APIMessageComponent> {
 		return {
-			...this,
+			...this.data,
 			components: this.components.map((component) => component.toJSON()),
 		};
+	}
+
+	public equals(other: APIActionRowComponent<APIMessageComponent> | ActionRow) {
+		if (other instanceof ActionRow) {
+			return isEqual(other.data, this.data) && isEqual(other.components, this.components);
+		}
+		return isEqual(other, {
+			...this.data,
+			components: this.components.map((component) => component.toJSON()),
+		});
 	}
 }

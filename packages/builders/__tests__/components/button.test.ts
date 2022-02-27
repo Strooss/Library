@@ -5,7 +5,7 @@ import {
 	ComponentType,
 } from 'discord-api-types/v9';
 import { buttonLabelValidator, buttonStyleValidator } from '../../src/components/Assertions';
-import { ButtonComponent } from '../../src/components/Button';
+import { ButtonComponent } from '../../src/components/button/Button';
 
 const buttonComponent = () => new ButtonComponent();
 
@@ -141,6 +141,18 @@ describe('Button Components', () => {
 			expect(new ButtonComponent(linkData).toJSON()).toEqual(linkData);
 
 			expect(buttonComponent().setLabel(linkData.label).setDisabled(true).setURL(linkData.url));
+		});
+		test('Given JSON data THEN builder is equal to it and itself', () => {
+			const buttonData: APIButtonComponentWithCustomId = {
+				type: ComponentType.Button,
+				custom_id: 'test',
+				label: 'test',
+				style: ButtonStyle.Primary,
+				disabled: true,
+			};
+
+			expect(new ButtonComponent(buttonData).equals(buttonData)).toBeTruthy();
+			expect(new ButtonComponent(buttonData).equals(new ButtonComponent(buttonData))).toBeTruthy();
 		});
 	});
 });

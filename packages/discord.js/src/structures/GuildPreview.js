@@ -62,7 +62,7 @@ class GuildPreview extends Base {
     if ('features' in data) {
       /**
        * An array of enabled guild features
-       * @type {Features[]}
+       * @type {GuildFeature[]}
        */
       this.features = data.features;
     }
@@ -115,6 +115,7 @@ class GuildPreview extends Base {
       new Collection(),
     );
   }
+
   /**
    * The timestamp this guild was created at
    * @type {number}

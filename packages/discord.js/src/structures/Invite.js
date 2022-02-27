@@ -1,12 +1,11 @@
 'use strict';
 
-const { RouteBases, Routes } = require('discord-api-types/v9');
+const { RouteBases, Routes, PermissionFlagsBits } = require('discord-api-types/v9');
 const Base = require('./Base');
 const { GuildScheduledEvent } = require('./GuildScheduledEvent');
 const IntegrationApplication = require('./IntegrationApplication');
 const InviteStageInstance = require('./InviteStageInstance');
 const { Error } = require('../errors');
-const Permissions = require('../util/Permissions');
 
 /**
  * Represents an invitation to a guild channel.
@@ -154,13 +153,21 @@ class Invite extends Base {
 
     if ('channel_id' in data) {
       /**
-       * The channel's id this invite is for
+       * The id of the channel this invite is for
        * @type {?Snowflake}
        */
       this.channelId = data.channel_id;
     }
 
-    if (data.channel) {
+    if ('channel' in data) {
+      /**
+       * The channel this invite is for
+       * @type {?Channel}
+       */
+      this.channel =
+        this.client.channels._add(data.channel, this.guild, { cache: false }) ??
+        this.client.channels.resolve(this.channelId);
+
       this.channelId ??= data.channel.id;
     }
 
@@ -181,6 +188,7 @@ class Invite extends Base {
       /**
        * The stage instance data if there is a public {@link StageInstance} in the stage channel this invite is for
        * @type {?InviteStageInstance}
+       * @deprecated
        */
       this.stageInstance = new InviteStageInstance(this.client, data.stage_instance, this.channel.id, this.guild.id);
     } else {
@@ -196,15 +204,6 @@ class Invite extends Base {
     } else {
       this.guildScheduledEvent ??= null;
     }
-  }
-
-  /**
-   * The channel this invite is for
-   * @type {Channel}
-   * @readonly
-   */
-  get channel() {
-    return this.client.channels.resolve(this.channelId);
   }
 
   /**
@@ -226,8 +225,8 @@ class Invite extends Base {
     if (!guild || !this.client.guilds.cache.has(guild.id)) return false;
     if (!guild.me) throw new Error('GUILD_UNCACHED_ME');
     return Boolean(
-      this.channel?.permissionsFor(this.client.user).has(Permissions.FLAGS.MANAGE_CHANNELS, false) ||
-        guild.me.permissions.has(Permissions.FLAGS.MANAGE_GUILD),
+      this.channel?.permissionsFor(this.client.user).has(PermissionFlagsBits.ManageChannels, false) ||
+        guild.me.permissions.has(PermissionFlagsBits.ManageGuild),
     );
   }
 

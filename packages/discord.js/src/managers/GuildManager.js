@@ -12,10 +12,10 @@ const { GuildMember } = require('../structures/GuildMember');
 const Invite = require('../structures/Invite');
 const OAuth2Guild = require('../structures/OAuth2Guild');
 const { Role } = require('../structures/Role');
-const { Events } = require('../util/Constants');
 const DataResolver = require('../util/DataResolver');
-const Permissions = require('../util/Permissions');
-const SystemChannelFlags = require('../util/SystemChannelFlags');
+const Events = require('../util/Events');
+const PermissionsBitField = require('../util/PermissionsBitField');
+const SystemChannelFlagsBitField = require('../util/SystemChannelFlagsBitField');
 const { resolveColor } = require('../util/Util');
 
 let cacheWarningEmitted = false;
@@ -188,17 +188,17 @@ class GuildManager extends CachedManager {
 
       if (!channel.permissionOverwrites) continue;
       for (const overwrite of channel.permissionOverwrites) {
-        overwrite.allow &&= Permissions.resolve(overwrite.allow).toString();
-        overwrite.deny &&= Permissions.resolve(overwrite.deny).toString();
+        overwrite.allow &&= PermissionsBitField.resolve(overwrite.allow).toString();
+        overwrite.deny &&= PermissionsBitField.resolve(overwrite.deny).toString();
       }
       channel.permission_overwrites = channel.permissionOverwrites;
       delete channel.permissionOverwrites;
     }
     for (const role of roles) {
       role.color &&= resolveColor(role.color);
-      role.permissions &&= Permissions.resolve(role.permissions).toString();
+      role.permissions &&= PermissionsBitField.resolve(role.permissions).toString();
     }
-    systemChannelFlags &&= SystemChannelFlags.resolve(systemChannelFlags);
+    systemChannelFlags &&= SystemChannelFlagsBitField.resolve(systemChannelFlags);
 
     const data = await this.client.rest.post(Routes.guilds(), {
       body: {
@@ -222,16 +222,16 @@ class GuildManager extends CachedManager {
       const handleGuild = guild => {
         if (guild.id === data.id) {
           clearTimeout(timeout);
-          this.client.removeListener(Events.GUILD_CREATE, handleGuild);
+          this.client.removeListener(Events.GuildCreate, handleGuild);
           this.client.decrementMaxListeners();
           resolve(guild);
         }
       };
       this.client.incrementMaxListeners();
-      this.client.on(Events.GUILD_CREATE, handleGuild);
+      this.client.on(Events.GuildCreate, handleGuild);
 
       const timeout = setTimeout(() => {
-        this.client.removeListener(Events.GUILD_CREATE, handleGuild);
+        this.client.removeListener(Events.GuildCreate, handleGuild);
         this.client.decrementMaxListeners();
         resolve(this.client.guilds._add(data));
       }, 10_000).unref();
@@ -250,7 +250,7 @@ class GuildManager extends CachedManager {
    * @typedef {Object} FetchGuildsOptions
    * @property {Snowflake} [before] Get guilds before this guild id
    * @property {Snowflake} [after] Get guilds after this guild id
-   * @property {number} [limit=200] Maximum number of guilds to request (1-200)
+   * @property {number} [limit] Maximum number of guilds to request (1-200)
    */
 
   /**

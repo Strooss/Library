@@ -37,7 +37,7 @@ class MessageManager extends CachedManager {
    * The parameters to pass in when requesting previous messages from a channel. `around`, `before` and
    * `after` are mutually exclusive. All the parameters are optional.
    * @typedef {Object} ChannelLogsQueryOptions
-   * @property {number} [limit=50] Number of messages to acquire
+   * @property {number} [limit] Number of messages to acquire
    * @property {Snowflake} [before] The message's id to get the messages that were posted before it
    * @property {Snowflake} [after] The message's id to get the messages that were posted after it
    * @property {Snowflake} [around] The message's id to get the messages that were posted around it
@@ -157,25 +157,27 @@ class MessageManager extends CachedManager {
   /**
    * Pins a message to the channel's pinned messages, even if it's not cached.
    * @param {MessageResolvable} message The message to pin
+   * @param {string} [reason] Reason for pinning
    * @returns {Promise<void>}
    */
-  async pin(message) {
+  async pin(message, reason) {
     message = this.resolveId(message);
     if (!message) throw new TypeError('INVALID_TYPE', 'message', 'MessageResolvable');
 
-    await this.client.rest.put(Routes.channelPins(this.channel.id, message));
+    await this.client.rest.put(Routes.channelPins(this.channel.id, message), { reason });
   }
 
   /**
    * Unpins a message from the channel's pinned messages, even if it's not cached.
    * @param {MessageResolvable} message The message to unpin
+   * @param {string} [reason] Reason for unpinning
    * @returns {Promise<void>}
    */
-  async unpin(message) {
+  async unpin(message, reason) {
     message = this.resolveId(message);
     if (!message) throw new TypeError('INVALID_TYPE', 'message', 'MessageResolvable');
 
-    await this.client.rest.delete(Routes.channelPin(this.channel.id, message));
+    await this.client.rest.delete(Routes.channelPin(this.channel.id, message), { reason });
   }
 
   /**

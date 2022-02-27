@@ -39,7 +39,7 @@ const getIntegerOption = () =>
 		.setName('owo')
 		.setDescription('Testing 123')
 		.setRequired(true)
-		.setMinValue(1)
+		.setMinValue(-1)
 		.setMaxValue(10);
 
 const getNumberOption = () =>
@@ -47,7 +47,7 @@ const getNumberOption = () =>
 		.setName('owo')
 		.setDescription('Testing 123')
 		.setRequired(true)
-		.setMinValue(1)
+		.setMinValue(-1.23)
 		.setMaxValue(10);
 
 const getUserOption = () => new SlashCommandUserOption().setName('owo').setDescription('Testing 123').setRequired(true);
@@ -84,30 +84,30 @@ describe('Application Command toJSON() results', () => {
 			type: ApplicationCommandOptionType.Integer,
 			required: true,
 			max_value: 10,
-			min_value: 1,
+			min_value: -1,
+		});
+
+		expect(getIntegerOption().setAutocomplete(true).setChoices().toJSON()).toEqual<APIApplicationCommandIntegerOption>({
+			name: 'owo',
+			description: 'Testing 123',
+			type: ApplicationCommandOptionType.Integer,
+			required: true,
+			max_value: 10,
+			min_value: -1,
+			autocomplete: true,
+			// @ts-expect-error TODO: you *can* send an empty array with autocomplete: true, should correct that in types
+			choices: [],
 		});
 
 		expect(
-			getIntegerOption().setAutocomplete(true).setChoices([]).toJSON(),
+			getIntegerOption().addChoice({ name: 'uwu', value: 1 }).toJSON(),
 		).toEqual<APIApplicationCommandIntegerOption>({
 			name: 'owo',
 			description: 'Testing 123',
 			type: ApplicationCommandOptionType.Integer,
 			required: true,
 			max_value: 10,
-			min_value: 1,
-			autocomplete: true,
-			// @ts-expect-error TODO: you *can* send an empty array with autocomplete: true, should correct that in types
-			choices: [],
-		});
-
-		expect(getIntegerOption().addChoice('uwu', 1).toJSON()).toEqual<APIApplicationCommandIntegerOption>({
-			name: 'owo',
-			description: 'Testing 123',
-			type: ApplicationCommandOptionType.Integer,
-			required: true,
-			max_value: 10,
-			min_value: 1,
+			min_value: -1,
 			choices: [{ name: 'uwu', value: 1 }],
 		});
 	});
@@ -128,28 +128,28 @@ describe('Application Command toJSON() results', () => {
 			type: ApplicationCommandOptionType.Number,
 			required: true,
 			max_value: 10,
-			min_value: 1,
+			min_value: -1.23,
 		});
 
-		expect(getNumberOption().setAutocomplete(true).setChoices([]).toJSON()).toEqual<APIApplicationCommandNumberOption>({
+		expect(getNumberOption().setAutocomplete(true).setChoices().toJSON()).toEqual<APIApplicationCommandNumberOption>({
 			name: 'owo',
 			description: 'Testing 123',
 			type: ApplicationCommandOptionType.Number,
 			required: true,
 			max_value: 10,
-			min_value: 1,
+			min_value: -1.23,
 			autocomplete: true,
 			// @ts-expect-error TODO: you *can* send an empty array with autocomplete: true, should correct that in types
 			choices: [],
 		});
 
-		expect(getNumberOption().addChoice('uwu', 1).toJSON()).toEqual<APIApplicationCommandNumberOption>({
+		expect(getNumberOption().addChoice({ name: 'uwu', value: 1 }).toJSON()).toEqual<APIApplicationCommandNumberOption>({
 			name: 'owo',
 			description: 'Testing 123',
 			type: ApplicationCommandOptionType.Number,
 			required: true,
 			max_value: 10,
-			min_value: 1,
+			min_value: -1.23,
 			choices: [{ name: 'uwu', value: 1 }],
 		});
 	});
@@ -171,7 +171,7 @@ describe('Application Command toJSON() results', () => {
 			required: true,
 		});
 
-		expect(getStringOption().setAutocomplete(true).setChoices([]).toJSON()).toEqual<APIApplicationCommandStringOption>({
+		expect(getStringOption().setAutocomplete(true).setChoices().toJSON()).toEqual<APIApplicationCommandStringOption>({
 			name: 'owo',
 			description: 'Testing 123',
 			type: ApplicationCommandOptionType.String,
@@ -181,7 +181,9 @@ describe('Application Command toJSON() results', () => {
 			choices: [],
 		});
 
-		expect(getStringOption().addChoice('uwu', '1').toJSON()).toEqual<APIApplicationCommandStringOption>({
+		expect(
+			getStringOption().addChoice({ name: 'uwu', value: '1' }).toJSON(),
+		).toEqual<APIApplicationCommandStringOption>({
 			name: 'owo',
 			description: 'Testing 123',
 			type: ApplicationCommandOptionType.String,

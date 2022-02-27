@@ -1,10 +1,11 @@
 'use strict';
 
 const { Buffer } = require('node:buffer');
-const { createComponent, Embed } = require('@discordjs/builders');
+const { isJSONEncodable } = require('@discordjs/builders');
 const { MessageFlags } = require('discord-api-types/v9');
 const { RangeError } = require('../errors');
 const DataResolver = require('../util/DataResolver');
+const MessageFlagsBitField = require('../util/MessageFlagsBitField');
 const Util = require('../util/Util');
 
 /**
@@ -130,7 +131,9 @@ class MessagePayload {
       }
     }
 
-    const components = this.options.components?.map(c => createComponent(c).toJSON());
+    const components = this.options.components?.map(c =>
+      isJSONEncodable(c) ? c.toJSON() : this.target.client.options.jsonTransformer(c),
+    );
 
     let username;
     let avatarURL;
@@ -140,9 +143,16 @@ class MessagePayload {
     }
 
     let flags;
-    if (typeof this.options.flags !== 'undefined' || this.isMessage || this.isMessageManager) {
-      // eslint-disable-next-line eqeqeq
-      flags = this.options.flags != null ? new MessageFlags(this.options.flags).bitfield : this.target.flags?.bitfield;
+    if (
+      typeof this.options.flags !== 'undefined' ||
+      (this.isMessage && typeof this.options.reply === 'undefined') ||
+      this.isMessageManager
+    ) {
+      flags =
+        // eslint-disable-next-line eqeqeq
+        this.options.flags != null
+          ? new MessageFlagsBitField(this.options.flags).bitfield
+          : this.target.flags?.bitfield;
     }
 
     if (isInteraction && this.options.ephemeral) {
@@ -186,7 +196,9 @@ class MessagePayload {
       content,
       tts,
       nonce,
-      embeds: this.options.embeds?.map(embed => (embed instanceof Embed ? embed : new Embed(embed)).toJSON()),
+      embeds: this.options.embeds?.map(embed =>
+        isJSONEncodable(embed) ? embed.toJSON() : this.target.client.options.jsonTransformer(embed),
+      ),
       components,
       username,
       avatar_url: avatarURL,
@@ -218,7 +230,7 @@ class MessagePayload {
    */
   static async resolveFile(fileLike) {
     let attachment;
-    let fileName;
+    let name;
 
     const findName = thing => {
       if (typeof thing === 'string') {
@@ -236,14 +248,14 @@ class MessagePayload {
       typeof fileLike === 'string' || fileLike instanceof Buffer || typeof fileLike.pipe === 'function';
     if (ownAttachment) {
       attachment = fileLike;
-      fileName = findName(attachment);
+      name = findName(attachment);
     } else {
       attachment = fileLike.attachment;
-      fileName = fileLike.name ?? findName(attachment);
+      name = fileLike.name ?? findName(attachment);
     }
 
-    const fileData = await DataResolver.resolveFile(attachment);
-    return { fileData, fileName };
+    const data = await DataResolver.resolveFile(attachment);
+    return { data, name };
   }
 
   /**

@@ -2,6 +2,7 @@
 
 const process = require('node:process');
 const { DefaultRestOptions } = require('@discordjs/rest');
+const Transformers = require('./Transformers');
 
 /**
  * @typedef {Function} CacheFactory
@@ -23,7 +24,7 @@ const { DefaultRestOptions } = require('@discordjs/rest');
  * <warn>Overriding the cache used in `GuildManager`, `ChannelManager`, `GuildChannelManager`, `RoleManager`,
  * and `PermissionOverwriteManager` is unsupported and **will** break functionality</warn>
  * @property {MessageMentionOptions} [allowedMentions] Default value for {@link MessageOptions#allowedMentions}
- * @property {PartialType[]} [partials] Structures allowed to be partial. This means events can be emitted even when
+ * @property {Partials[]} [partials] Structures allowed to be partial. This means events can be emitted even when
  * they're missing all the data for a particular structure. See the "Partial Structures" topic on the
  * [guide](https://discordjs.guide/popular-topics/partials.html) for some
  * important usage information, as partials require you to put checks in place when handling data.
@@ -35,6 +36,7 @@ const { DefaultRestOptions } = require('@discordjs/rest');
  * @property {SweeperOptions} [sweepers={}] Options for cache sweeping
  * @property {WebsocketOptions} [ws] Options for the WebSocket
  * @property {RESTOptions} [rest] Options for the REST manager
+ * @property {Function} [jsonTransformer] A function used to transform outgoing json data
  */
 
 /**
@@ -88,6 +90,7 @@ class Options extends null {
         version: 9,
       },
       rest: DefaultRestOptions,
+      jsonTransformer: Transformers.toSnakeCase,
     };
   }
 

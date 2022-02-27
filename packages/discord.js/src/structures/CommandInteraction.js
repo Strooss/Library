@@ -3,6 +3,7 @@
 const { Collection } = require('@discordjs/collection');
 const Interaction = require('./Interaction');
 const InteractionWebhook = require('./InteractionWebhook');
+const MessageAttachment = require('./MessageAttachment');
 const InteractionResponses = require('./interfaces/InteractionResponses');
 
 /**
@@ -32,6 +33,12 @@ class CommandInteraction extends Interaction {
      * @type {string}
      */
     this.commandName = data.data.name;
+
+    /**
+     * The invoked application command's type
+     * @type {ApplicationCommandType}
+     */
+    this.commandType = data.data.type;
 
     /**
      * Whether the reply to this interaction has been deferred
@@ -75,6 +82,7 @@ class CommandInteraction extends Interaction {
    * @property {Collection<Snowflake, Role|APIRole>} [roles] The resolved roles
    * @property {Collection<Snowflake, Channel|APIChannel>} [channels] The resolved channels
    * @property {Collection<Snowflake, Message|APIMessage>} [messages] The resolved messages
+   * @property {Collection<Snowflake, MessageAttachment>} [attachments] The resolved attachments
    */
 
   /**
@@ -83,7 +91,7 @@ class CommandInteraction extends Interaction {
    * @returns {CommandInteractionResolvedData}
    * @private
    */
-  transformResolved({ members, users, channels, roles, messages }) {
+  transformResolved({ members, users, channels, roles, messages, attachments }) {
     const result = {};
 
     if (members) {
@@ -122,6 +130,14 @@ class CommandInteraction extends Interaction {
       }
     }
 
+    if (attachments) {
+      result.attachments = new Collection();
+      for (const attachment of Object.values(attachments)) {
+        const patched = new MessageAttachment(attachment.url, attachment.filename, attachment);
+        result.attachments.set(attachment.id, patched);
+      }
+    }
+
     return result;
   }
 
@@ -130,7 +146,9 @@ class CommandInteraction extends Interaction {
    * @typedef {Object} CommandInteractionOption
    * @property {string} name The name of the option
    * @property {ApplicationCommandOptionType} type The type of the option
-   * @property {boolean} [autocomplete] Whether the option is an autocomplete option
+   * @property {boolean} [autocomplete] Whether the autocomplete interaction is enabled for a
+   * {@link ApplicationCommandOptionType.String}, {@link ApplicationCommandOptionType.Integer} or
+   * {@link ApplicationCommandOptionType.Number} option
    * @property {string|number|boolean} [value] The value of the option
    * @property {CommandInteractionOption[]} [options] Additional options if this option is a
    * subcommand (group)
@@ -138,6 +156,7 @@ class CommandInteraction extends Interaction {
    * @property {GuildMember|APIGuildMember} [member] The resolved member
    * @property {GuildChannel|ThreadChannel|APIChannel} [channel] The resolved channel
    * @property {Role|APIRole} [role] The resolved role
+   * @property {MessageAttachment} [attachment] The resolved attachment
    */
 
   /**
@@ -168,6 +187,9 @@ class CommandInteraction extends Interaction {
 
       const role = resolved.roles?.[option.value];
       if (role) result.role = this.guild?.roles._add(role) ?? role;
+
+      const attachment = resolved.attachments?.[option.value];
+      if (attachment) result.attachment = new MessageAttachment(attachment.url, attachment.filename, attachment);
     }
 
     return result;

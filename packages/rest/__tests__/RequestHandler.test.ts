@@ -166,7 +166,7 @@ nock(`${DefaultRestOptions.api}/v${DefaultRestOptions.version}`)
 		];
 	})
 	.get('/unexpected')
-	.times(2)
+	.times(3)
 	.reply((): nock.ReplyFnResult => {
 		if (unexpected429) {
 			unexpected429 = false;
@@ -259,12 +259,13 @@ test('Significant Invalid Requests', async () => {
 
 test('Handle standard rate limits', async () => {
 	const [a, b, c] = [api.get('/standard'), api.get('/standard'), api.get('/standard')];
+	const uint8 = new Uint8Array();
 
-	expect(await a).toStrictEqual(Buffer.alloc(0));
+	expect(new Uint8Array((await a) as ArrayBuffer)).toStrictEqual(uint8);
 	const previous1 = performance.now();
-	expect(await b).toStrictEqual(Buffer.alloc(0));
+	expect(new Uint8Array((await b) as ArrayBuffer)).toStrictEqual(uint8);
 	const previous2 = performance.now();
-	expect(await c).toStrictEqual(Buffer.alloc(0));
+	expect(new Uint8Array((await c) as ArrayBuffer)).toStrictEqual(uint8);
 	const now = performance.now();
 	expect(previous2).toBeGreaterThanOrEqual(previous1 + 250);
 	expect(now).toBeGreaterThanOrEqual(previous2 + 250);
@@ -310,9 +311,22 @@ test('Handle sublimits', async () => {
 });
 
 test('Handle unexpected 429', async () => {
-	const previous = Date.now();
-	expect(await api.get('/unexpected')).toStrictEqual({ test: true });
-	expect(Date.now()).toBeGreaterThanOrEqual(previous + 1000);
+	const previous = performance.now();
+	let firstResolvedTime: number;
+	let secondResolvedTime: number;
+	const unexepectedSublimit = api.get('/unexpected').then((res) => {
+		firstResolvedTime = performance.now();
+		return res;
+	});
+	const queuedSublimit = api.get('/unexpected').then((res) => {
+		secondResolvedTime = performance.now();
+		return res;
+	});
+
+	expect(await unexepectedSublimit).toStrictEqual({ test: true });
+	expect(await queuedSublimit).toStrictEqual({ test: true });
+	expect(performance.now()).toBeGreaterThanOrEqual(previous + 1000);
+	expect(secondResolvedTime).toBeGreaterThan(firstResolvedTime);
 });
 
 test('Handle unexpected 429 cloudflare', async () => {

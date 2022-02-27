@@ -1,10 +1,10 @@
 'use strict';
 
 const { Buffer } = require('node:buffer');
-const fs = require('node:fs');
+const fs = require('node:fs/promises');
 const path = require('node:path');
 const stream = require('node:stream');
-const fetch = require('node-fetch');
+const { fetch } = require('undici');
 const { Error: DiscordError, TypeError } = require('../errors');
 const Invite = require('../structures/Invite');
 
@@ -67,7 +67,7 @@ class DataResolver extends null {
       return image;
     }
     const file = await this.resolveFile(image);
-    return DataResolver.resolveBase64(file);
+    return this.resolveBase64(file);
   }
 
   /**
@@ -118,17 +118,14 @@ class DataResolver extends null {
     if (typeof resource === 'string') {
       if (/^https?:\/\//.test(resource)) {
         const res = await fetch(resource);
-        return res.body;
+        return Buffer.from(await res.arrayBuffer());
       }
 
-      return new Promise((resolve, reject) => {
-        const file = path.resolve(resource);
-        fs.stat(file, (err, stats) => {
-          if (err) return reject(err);
-          if (!stats.isFile()) return reject(new DiscordError('FILE_NOT_FOUND', file));
-          return resolve(fs.createReadStream(file));
-        });
-      });
+      const file = path.resolve(resource);
+
+      const stats = await fs.stat(file);
+      if (!stats.isFile()) throw new DiscordError('FILE_NOT_FOUND', file);
+      return fs.readFile(file);
     }
 
     throw new TypeError('REQ_RESOURCE_TYPE');

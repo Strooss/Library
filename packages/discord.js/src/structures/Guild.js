@@ -22,9 +22,10 @@ const PresenceManager = require('../managers/PresenceManager');
 const RoleManager = require('../managers/RoleManager');
 const StageInstanceManager = require('../managers/StageInstanceManager');
 const VoiceStateManager = require('../managers/VoiceStateManager');
-const { PartialTypes, Status } = require('../util/Constants');
 const DataResolver = require('../util/DataResolver');
-const SystemChannelFlags = require('../util/SystemChannelFlags');
+const Partials = require('../util/Partials');
+const Status = require('../util/Status');
+const SystemChannelFlagsBitField = require('../util/SystemChannelFlagsBitField');
 const Util = require('../util/Util');
 
 /**
@@ -168,34 +169,6 @@ class Guild extends AnonymousGuild {
       this.premiumProgressBarEnabled = data.premium_progress_bar_enabled;
     }
 
-    /**
-     * An array of enabled guild features, here are the possible values:
-     * * ANIMATED_ICON
-     * * BANNER
-     * * COMMERCE
-     * * COMMUNITY
-     * * DISCOVERABLE
-     * * FEATURABLE
-     * * INVITE_SPLASH
-     * * MEMBER_VERIFICATION_GATE_ENABLED
-     * * NEWS
-     * * PARTNERED
-     * * PREVIEW_ENABLED
-     * * VANITY_URL
-     * * VERIFIED
-     * * VIP_REGIONS
-     * * WELCOME_SCREEN_ENABLED
-     * * TICKETED_EVENTS_ENABLED
-     * * MONETIZATION_ENABLED
-     * * MORE_STICKERS
-     * * THREE_DAY_THREAD_ARCHIVE
-     * * SEVEN_DAY_THREAD_ARCHIVE
-     * * PRIVATE_THREADS
-     * * ROLE_ICONS
-     * @typedef {string} Features
-     * @see {@link https://discord.com/developers/docs/resources/guild#guild-object-guild-features}
-     */
-
     if ('application_id' in data) {
       /**
        * The id of the application that created this guild (if applicable)
@@ -234,14 +207,6 @@ class Guild extends AnonymousGuild {
        * @type {GuildPremiumTier}
        */
       this.premiumTier = data.premium_tier;
-    }
-
-    if ('premium_subscription_count' in data) {
-      /**
-       * The total number of boosts for this server
-       * @type {?number}
-       */
-      this.premiumSubscriptionCount = data.premium_subscription_count;
     }
 
     if ('widget_enabled' in data) {
@@ -295,9 +260,9 @@ class Guild extends AnonymousGuild {
     if ('system_channel_flags' in data) {
       /**
        * The value set for the guild's system channel flags
-       * @type {Readonly<SystemChannelFlags>}
+       * @type {Readonly<SystemChannelFlagsBitField>}
        */
-      this.systemChannelFlags = new SystemChannelFlags(data.system_channel_flags).freeze();
+      this.systemChannelFlags = new SystemChannelFlagsBitField(data.system_channel_flags).freeze();
     }
 
     if ('max_members' in data) {
@@ -312,11 +277,11 @@ class Guild extends AnonymousGuild {
 
     if ('max_presences' in data) {
       /**
-       * The maximum amount of presences the guild can have
+       * The maximum amount of presences the guild can have (this is `null` for all but the largest of guilds)
        * <info>You will need to fetch the guild using {@link Guild#fetch} if you want to receive this parameter</info>
        * @type {?number}
        */
-      this.maximumPresences = data.max_presences ?? 25_000;
+      this.maximumPresences = data.max_presences;
     } else {
       this.maximumPresences ??= null;
     }
@@ -543,7 +508,7 @@ class Guild extends AnonymousGuild {
   get me() {
     return (
       this.members.resolve(this.client.user.id) ??
-      (this.client.options.partials.includes(PartialTypes.GUILD_MEMBER)
+      (this.client.options.partials.includes(Partials.GuildMember)
         ? this.members._add({ user: { id: this.client.user.id } }, true)
         : null)
     );
@@ -726,7 +691,7 @@ class Guild extends AnonymousGuild {
    * @property {Snowflake|GuildAuditLogsEntry} [before] Only return entries before this entry
    * @property {number} [limit] The number of entries to return
    * @property {UserResolvable} [user] Only return entries for actions made by this user
-   * @property {AuditLogAction|number} [type] Only return entries for this action type
+   * @property {?AuditLogEvent} [type] Only return entries for this action type
    */
 
   /**
@@ -753,7 +718,7 @@ class Guild extends AnonymousGuild {
     }
 
     if (options.user) {
-      const id = this.client.user.resolveId(options.user);
+      const id = this.client.users.resolveId(options.user);
       if (!id) throw new TypeError('INVALID_TYPE', 'user', 'UserResolvable');
       query.set('user_id', id);
     }
@@ -788,7 +753,7 @@ class Guild extends AnonymousGuild {
    * @property {string} [preferredLocale] The preferred locale of the guild
    * @property {boolean} [premiumProgressBarEnabled] Whether the guild's premium progress bar is enabled
    * @property {string} [description] The discovery description of the guild
-   * @property {Features[]} [features] The features of the guild
+   * @property {GuildFeature[]} [features] The features of the guild
    */
 
   /**
@@ -845,7 +810,7 @@ class Guild extends AnonymousGuild {
       _data.default_message_notifications = data.defaultMessageNotifications;
     }
     if (typeof data.systemChannelFlags !== 'undefined') {
-      _data.system_channel_flags = SystemChannelFlags.resolve(data.systemChannelFlags);
+      _data.system_channel_flags = SystemChannelFlagsBitField.resolve(data.systemChannelFlags);
     }
     if (typeof data.rulesChannel !== 'undefined') {
       _data.rules_channel_id = this.client.channels.resolveId(data.rulesChannel);
@@ -1271,7 +1236,7 @@ class Guild extends AnonymousGuild {
       this.client.voice.adapters.set(this.id, methods);
       return {
         sendPayload: data => {
-          if (this.shard.status !== Status.READY) return false;
+          if (this.shard.status !== Status.Ready) return false;
           this.shard.send(data);
           return true;
         },

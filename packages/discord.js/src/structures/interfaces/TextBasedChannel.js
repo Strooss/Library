@@ -62,7 +62,7 @@ class TextBasedChannel {
    * @property {MessageMentionOptions} [allowedMentions] Which mentions should be parsed from the message content
    * (see [here](https://discord.com/developers/docs/resources/channel#allowed-mentions-object) for more details)
    * @property {FileOptions[]|BufferResolvable[]|MessageAttachment[]} [files] Files to send with the message
-   * @property {MessageActionRow[]|MessageActionRowOptions[]} [components]
+   * @property {ActionRow[]|ActionRowOptions[]} [components]
    * Action rows containing interactive components for the message (buttons, select menus)
    * @property {MessageAttachment[]} [attachments] Attachments to send in the message
    */
@@ -72,7 +72,7 @@ class TextBasedChannel {
    * @typedef {BaseMessageOptions} MessageOptions
    * @property {ReplyOptions} [reply] The options for replying to a message
    * @property {StickerResolvable[]} [stickers=[]] Stickers to send in the message
-   * @property {MessageFlags} [flags] Which flags to set for the message. Only `SUPPRESS_EMBEDS` can be set.
+   * @property {MessageFlags} [flags] Which flags to set for the message. Only `MessageFlags.SuppressEmbeds` can be set.
    */
 
   /**
@@ -103,8 +103,8 @@ class TextBasedChannel {
    * Options for sending a message with a reply.
    * @typedef {Object} ReplyOptions
    * @property {MessageResolvable} messageReference The message to reply to (must be in the same channel and not system)
-   * @property {boolean} [failIfNotExists=true] Whether to error if the referenced message
-   * does not exist (creates a standard message in this case when false)
+   * @property {boolean} [failIfNotExists=this.client.options.failIfNotExists] Whether to error if the referenced
+   * message does not exist (creates a standard message in this case when false)
    */
 
   /**

@@ -127,11 +127,13 @@ class ApplicationCommand extends Base {
   /**
    * Data for creating or editing an application command.
    * @typedef {Object} ApplicationCommandData
-   * @property {string} name The name of the command
-   * @property {string} description The description of the command
-   * @property {ApplicationCommandType} [type] The type of the command
+   * @property {string} name The name of the command, must be in all lowercase if type is
+   * {@link ApplicationCommandType.ChatInput}
+   * @property {string} description The description of the command, if type is {@link ApplicationCommandType.ChatInput}
+   * @property {ApplicationCommandType} [type=ApplicationCommandType.ChatInput] The type of the command
    * @property {ApplicationCommandOptionData[]} [options] Options for the command
-   * @property {boolean} [defaultPermission] Whether the command is enabled by default when the app is added to a guild
+   * @property {boolean} [defaultPermission=true] Whether the command is enabled by default when the app is added to a
+   * guild
    */
 
   /**
@@ -144,7 +146,9 @@ class ApplicationCommand extends Base {
    * @property {ApplicationCommandOptionType} type The type of the option
    * @property {string} name The name of the option
    * @property {string} description The description of the option
-   * @property {boolean} [autocomplete] Whether the option is an autocomplete option
+   * @property {boolean} [autocomplete] Whether the autocomplete interaction is enabled for a
+   * {@link ApplicationCommandOptionType.String}, {@link ApplicationCommandOptionType.Integer} or
+   * {@link ApplicationCommandOptionType.Number} option
    * @property {boolean} [required] Whether the option is required
    * @property {ApplicationCommandOptionChoice[]} [choices] The choices of the option for the user to pick from
    * @property {ApplicationCommandOptionData[]} [options] Additional options if this option is a subcommand (group)
@@ -346,7 +350,9 @@ class ApplicationCommand extends Base {
    * @property {string} name The name of the option
    * @property {string} description The description of the option
    * @property {boolean} [required] Whether the option is required
-   * @property {boolean} [autocomplete] Whether the option is an autocomplete option
+   * @property {boolean} [autocomplete] Whether the autocomplete interaction is enabled for a
+   * {@link ApplicationCommandOptionType.String}, {@link ApplicationCommandOptionType.Integer} or
+   * {@link ApplicationCommandOptionType.Number} option
    * @property {ApplicationCommandOptionChoice[]} [choices] The choices of the option for the user to pick from
    * @property {ApplicationCommandOption[]} [options] Additional options if this option is a subcommand (group)
    * @property {ChannelType[]} [channelTypes] When the option type is channel,

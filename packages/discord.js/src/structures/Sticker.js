@@ -160,6 +160,7 @@ class Sticker extends Base {
    * <info>If the sticker's format is {@link StickerFormatType.Lottie}, it returns
    * the URL of the Lottie JSON file.</info>
    * @type {string}
+   * @readonly
    */
   get url() {
     return this.client.rest.cdn.sticker(this.id, this.format === StickerFormatType.Lottie ? 'json' : 'png');
@@ -190,10 +191,7 @@ class Sticker extends Base {
   async fetchUser() {
     if (this.partial) await this.fetch();
     if (!this.guildId) throw new Error('NOT_GUILD_STICKER');
-
-    const data = await this.client.rest.get(Routes.guildSticker(this.guildId, this.id));
-    this._patch(data);
-    return this.user;
+    return this.guild.stickers.fetchUser(this);
   }
 
   /**
