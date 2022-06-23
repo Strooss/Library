@@ -1,7 +1,7 @@
+/* eslint-disable @typescript-eslint/method-signature-style */
 import { createSocket, Socket } from 'node:dgram';
+import { EventEmitter } from 'node:events';
 import { isIPv4 } from 'node:net';
-import { TypedEmitter } from 'tiny-typed-emitter';
-import type { Awaited } from '../util/util';
 
 /**
  * Stores an IP address and port. Used to store socket details for the local client as well as
@@ -15,13 +15,6 @@ export interface SocketConfig {
 interface KeepAlive {
 	value: number;
 	timestamp: number;
-}
-
-export interface VoiceUDPSocketEvents {
-	error: (error: Error) => Awaited<void>;
-	close: () => Awaited<void>;
-	debug: (message: string) => Awaited<void>;
-	message: (message: Buffer) => Awaited<void>;
 }
 
 /**
@@ -58,10 +51,17 @@ const KEEP_ALIVE_LIMIT = 12;
  */
 const MAX_COUNTER_VALUE = 2 ** 32 - 1;
 
+export interface VoiceUDPSocket extends EventEmitter {
+	on(event: 'error', listener: (error: Error) => void): this;
+	on(event: 'close', listener: () => void): this;
+	on(event: 'debug', listener: (message: string) => void): this;
+	on(event: 'message', listener: (message: Buffer) => void): this;
+}
+
 /**
  * Manages the UDP networking for a voice connection.
  */
-export class VoiceUDPSocket extends TypedEmitter<VoiceUDPSocketEvents> {
+export class VoiceUDPSocket extends EventEmitter {
 	/**
 	 * The underlying network Socket for the VoiceUDPSocket.
 	 */

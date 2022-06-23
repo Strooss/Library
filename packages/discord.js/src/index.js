@@ -10,6 +10,13 @@ exports.ShardClientUtil = require('./sharding/ShardClientUtil');
 exports.ShardingManager = require('./sharding/ShardingManager');
 exports.WebhookClient = require('./client/WebhookClient');
 
+// Errors
+const { Error, TypeError, RangeError } = require('./errors/DJSError');
+exports.DiscordjsError = Error;
+exports.DiscordjsTypeError = TypeError;
+exports.DiscordjsRangeError = RangeError;
+exports.DiscordjsErrorCodes = require('./errors/ErrorCodes');
+
 // Utilities
 exports.ActivityFlagsBitField = require('./util/ActivityFlagsBitField');
 exports.ApplicationFlagsBitField = require('./util/ApplicationFlagsBitField');
@@ -34,7 +41,7 @@ exports.Sweepers = require('./util/Sweepers');
 exports.SystemChannelFlagsBitField = require('./util/SystemChannelFlagsBitField');
 exports.ThreadMemberFlagsBitField = require('./util/ThreadMemberFlagsBitField');
 exports.UserFlagsBitField = require('./util/UserFlagsBitField');
-exports.Util = require('./util/Util');
+__exportStar(require('./util/Util.js'), exports);
 exports.version = require('../package.json').version;
 
 // Managers
@@ -123,6 +130,7 @@ exports.InviteStageInstance = require('./structures/InviteStageInstance');
 exports.InviteGuild = require('./structures/InviteGuild');
 exports.Message = require('./structures/Message').Message;
 exports.Attachment = require('./structures/Attachment');
+exports.AttachmentBuilder = require('./structures/AttachmentBuilder');
 exports.ModalBuilder = require('./structures/ModalBuilder');
 exports.MessageCollector = require('./structures/MessageCollector');
 exports.MessageComponentInteraction = require('./structures/MessageComponentInteraction');
@@ -131,7 +139,7 @@ exports.MessageMentions = require('./structures/MessageMentions');
 exports.MessagePayload = require('./structures/MessagePayload');
 exports.MessageReaction = require('./structures/MessageReaction');
 exports.ModalSubmitInteraction = require('./structures/ModalSubmitInteraction');
-exports.ModalSubmitFieldsResolver = require('./structures/ModalSubmitFieldsResolver');
+exports.ModalSubmitFields = require('./structures/ModalSubmitFields');
 exports.NewsChannel = require('./structures/NewsChannel');
 exports.OAuth2Guild = require('./structures/OAuth2Guild');
 exports.PartialGroupDMChannel = require('./structures/PartialGroupDMChannel');

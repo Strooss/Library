@@ -26,6 +26,7 @@ dist/
 .DS_Store
 .turbo
 tsconfig.tsbuildinfo
+coverage/
 
 # yarn
 .pnp.*
@@ -35,3 +36,7 @@ tsconfig.tsbuildinfo
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Cache
+.prettiercache
+.eslintcache

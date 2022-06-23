@@ -1,25 +1,17 @@
-import { TypedEmitter } from 'tiny-typed-emitter';
-import type { Awaited } from '../util/util';
+import { EventEmitter } from 'node:events';
 
-/**
- * The events that a SpeakingMap can emit.
- */
-export interface SpeakingMapEvents {
+export interface SpeakingMap extends EventEmitter {
 	/**
-	 * Emitted when a user starts speaking.
+	 * Emitted when a user starts/stops speaking.
+	 * @event
 	 */
-	start: (userId: string) => Awaited<void>;
-
-	/**
-	 * Emitted when a user stops speaking.
-	 */
-	end: (userId: string) => Awaited<void>;
+	on: (event: 'start' | 'end', listener: (userId: string) => void) => this;
 }
 
 /**
  * Tracks the speaking states of users in a voice channel.
  */
-export class SpeakingMap extends TypedEmitter<SpeakingMapEvents> {
+export class SpeakingMap extends EventEmitter {
 	/**
 	 * The delay after a packet is received from a user until they're marked as not speaking anymore.
 	 */

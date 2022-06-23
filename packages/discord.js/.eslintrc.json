@@ -1,6 +1,6 @@
 {
   "root": true,
-  "extends": ["eslint:recommended", "plugin:prettier/recommended"],
+  "extends": ["eslint:recommended"],
   "plugins": ["import"],
   "parserOptions": {
     "ecmaVersion": 2022
@@ -17,17 +17,6 @@
         "alphabetize": {
           "order": "asc"
         }
-      }
-    ],
-    "prettier/prettier": [
-      2,
-      {
-        "printWidth": 120,
-        "singleQuote": true,
-        "quoteProps": "as-needed",
-        "trailingComma": "all",
-        "endOfLine": "lf",
-        "arrowParens": "avoid"
       }
     ],
     "strict": ["error", "global"],

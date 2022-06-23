@@ -10,7 +10,7 @@ body = """
 	{% if previous %}\
 		{% if previous.version %}\
 			(https://github.com/discordjs/discord.js/compare/{{ previous.version }}...{{ version }})\
-		{% else %}
+		{% else %}\
 			(https://github.com/discordjs/discord.js/tree/{{ version }})\
 		{% endif %}\
 	{% endif %} \
@@ -58,8 +58,7 @@ commit_parsers = [
 	{ body = ".*security", group = "Security"},
 ]
 filter_commits = true
-tag_pattern = "@discordjs\\/builders@.*"
-skip_tags = "v[0-9]*|11|12"
+tag_pattern = "@discordjs/builders@[0-9]*"
 ignore_tags = ""
 topo_order = false
 sort_commits = "newest"

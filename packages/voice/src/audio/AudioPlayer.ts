@@ -1,11 +1,11 @@
-/* eslint-disable @typescript-eslint/prefer-ts-expect-error */
-import { TypedEmitter } from 'tiny-typed-emitter';
+/* eslint-disable @typescript-eslint/prefer-ts-expect-error, @typescript-eslint/method-signature-style */
+import EventEmitter from 'node:events';
 import { AudioPlayerError } from './AudioPlayerError';
 import type { AudioResource } from './AudioResource';
 import { PlayerSubscription } from './PlayerSubscription';
 import { addAudioPlayer, deleteAudioPlayer } from '../DataStore';
 import { VoiceConnection, VoiceConnectionStatus } from '../VoiceConnection';
-import { Awaited, noop } from '../util/util';
+import { noop } from '../util/util';
 
 // The Opus "silent" frame
 export const SILENCE_FRAME = Buffer.from([0xf8, 0xff, 0xfe]);
@@ -151,18 +151,36 @@ export type AudioPlayerState =
 	| AudioPlayerPlayingState
 	| AudioPlayerPausedState;
 
-export type AudioPlayerEvents = {
-	error: (error: AudioPlayerError) => Awaited<void>;
-	debug: (message: string) => Awaited<void>;
-	stateChange: (oldState: AudioPlayerState, newState: AudioPlayerState) => Awaited<void>;
-	subscribe: (subscription: PlayerSubscription) => Awaited<void>;
-	unsubscribe: (subscription: PlayerSubscription) => Awaited<void>;
-} & {
-	[status in AudioPlayerStatus]: (
-		oldState: AudioPlayerState,
-		newState: AudioPlayerState & { status: status },
-	) => Awaited<void>;
-};
+export interface AudioPlayer extends EventEmitter {
+	/**
+	 * Emitted when there is an error emitted from the audio resource played by the audio player
+	 * @event
+	 */
+	on(event: 'error', listener: (error: AudioPlayerError) => void): this;
+	/**
+	 * Emitted debugging information about the audio player
+	 * @event
+	 */
+	on(event: 'debug', listener: (message: string) => void): this;
+	/**
+	 * Emitted when the state of the audio player changes
+	 * @event
+	 */
+	on(event: 'stateChange', listener: (oldState: AudioPlayerState, newState: AudioPlayerState) => void): this;
+	/**
+	 * Emitted when the audio player is subscribed to a voice connection
+	 * @event
+	 */
+	on(event: 'subscribe' | 'unsubscribe', listener: (subscription: PlayerSubscription) => void): this;
+	/**
+	 * Emitted when the status of state changes to a specific status
+	 * @event
+	 */
+	on<T extends AudioPlayerStatus>(
+		event: T,
+		listener: (oldState: AudioPlayerState, newState: AudioPlayerState & { status: T }) => void,
+	): this;
+}
 
 /**
  * Stringifies an AudioPlayerState instance.
@@ -187,7 +205,7 @@ function stringifyState(state: AudioPlayerState) {
  * The AudioPlayer drives the timing of playback, and therefore is unaffected by voice connections
  * becoming unavailable. Its behavior in these scenarios can be configured.
  */
-export class AudioPlayer extends TypedEmitter<AudioPlayerEvents> {
+export class AudioPlayer extends EventEmitter {
 	/**
 	 * The state that the AudioPlayer is in.
 	 */
@@ -372,12 +390,6 @@ export class AudioPlayer extends TypedEmitter<AudioPlayerEvents> {
 		// state if the resource is still being used.
 		const onStreamError = (error: Error) => {
 			if (this.state.status !== AudioPlayerStatus.Idle) {
-				/**
-				 * Emitted when there is an error emitted from the audio resource played by the audio player
-				 *
-				 * @event AudioPlayer#error
-				 * @type {AudioPlayerError}
-				 */
 				this.emit('error', new AudioPlayerError(error, this.state.resource));
 			}
 
