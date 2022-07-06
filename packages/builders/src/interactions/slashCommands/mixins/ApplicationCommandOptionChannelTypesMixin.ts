@@ -23,13 +23,14 @@ export class ApplicationCommandOptionChannelTypesMixin {
 	/**
 	 * Adds channel types to this option
 	 *
-	 * @param channelTypes The channel types to add
+	 * @param channelTypes - The channel types to add
 	 */
 	public addChannelTypes(...channelTypes: ApplicationCommandOptionAllowedChannelTypes[]) {
 		if (this.channel_types === undefined) {
 			Reflect.set(this, 'channel_types', []);
 		}
 
+		// @ts-expect-error: Shapeshift TODO
 		this.channel_types!.push(...channelTypesPredicate.parse(channelTypes));
 
 		return this;

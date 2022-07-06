@@ -267,16 +267,6 @@ function resolvePartialEmoji(emoji) {
 }
 
 /**
- * Shallow-copies an object with its class/prototype intact.
- * @param {Object} obj Object to clone
- * @returns {Object}
- * @private
- */
-function cloneObject(obj) {
-  return Object.assign(Object.create(obj), obj);
-}
-
-/**
  * Sets default properties on an object that aren't already specified.
  * @param {Object} def Default properties
  * @param {Object} given Object to assign defaults to
@@ -445,14 +435,14 @@ function discordSort(collection) {
 
 /**
  * Sets the position of a Channel or Role.
- * @param {Channel|Role} item Object to set the position of
+ * @param {BaseChannel|Role} item Object to set the position of
  * @param {number} position New position for the object
  * @param {boolean} relative Whether `position` is relative to its current position
- * @param {Collection<string, Channel|Role>} sorted A collection of the objects sorted properly
+ * @param {Collection<string, BaseChannel|Role>} sorted A collection of the objects sorted properly
  * @param {Client} client The client to use to patch the data
  * @param {string} route Route to call PATCH on
  * @param {string} [reason] Reason for the change
- * @returns {Promise<Channel[]|Role[]>} Updated item list, with `id` and `position` properties
+ * @returns {Promise<BaseChannel[]|Role[]>} Updated item list, with `id` and `position` properties
  * @private
  */
 async function setPosition(item, position, relative, sorted, client, route, reason) {
@@ -474,6 +464,7 @@ function basename(path, ext) {
   const res = parse(path);
   return ext && res.ext.startsWith(ext) ? res.name : res.base.split('?')[0];
 }
+
 /**
  * The content to have all mentions replaced by the equivalent text.
  * @param {string} str The string to be converted
@@ -481,32 +472,32 @@ function basename(path, ext) {
  * @returns {string}
  */
 function cleanContent(str, channel) {
-  str = str
-    .replace(/<@!?[0-9]+>/g, input => {
-      const id = input.replace(/<|!|>|@/g, '');
-      if (channel.type === ChannelType.DM) {
-        const user = channel.client.users.cache.get(id);
-        return user ? `@${user.username}` : input;
-      }
+  return str.replaceAll(/<(@[!&]?|#)(\d{17,19})>/g, (match, type, id) => {
+    switch (type) {
+      case '@':
+      case '@!': {
+        const member = channel.guild?.members.cache.get(id);
+        if (member) {
+          return `@${member.displayName}`;
+        }
 
-      const member = channel.guild.members.cache.get(id);
-      if (member) {
-        return `@${member.displayName}`;
-      } else {
         const user = channel.client.users.cache.get(id);
-        return user ? `@${user.username}` : input;
+        return user ? `@${user.username}` : match;
       }
-    })
-    .replace(/<#[0-9]+>/g, input => {
-      const mentionedChannel = channel.client.channels.cache.get(input.replace(/<|#|>/g, ''));
-      return mentionedChannel ? `#${mentionedChannel.name}` : input;
-    })
-    .replace(/<@&[0-9]+>/g, input => {
-      if (channel.type === ChannelType.DM) return input;
-      const role = channel.guild.roles.cache.get(input.replace(/<|@|>|&/g, ''));
-      return role ? `@${role.name}` : input;
-    });
-  return str;
+      case '@&': {
+        if (channel.type === ChannelType.DM) return match;
+        const role = channel.guild.roles.cache.get(id);
+        return role ? `@${role.name}` : match;
+      }
+      case '#': {
+        const mentionedChannel = channel.client.channels.cache.get(id);
+        return mentionedChannel ? `#${mentionedChannel.name}` : match;
+      }
+      default: {
+        return match;
+      }
+    }
+  });
 }
 
 /**
@@ -528,6 +519,32 @@ function lazy(cb) {
   return () => (defaultValue ??= cb());
 }
 
+/**
+ * Represents the credentials used for a given webhook
+ * @typedef {Object} WebhookCredentials
+ * @property {string} id The webhook's id
+ * @property {string} token The webhook's token
+ */
+
+/**
+ * Parses a webhook URL for the id and token
+ * @param {string} url The URL to parse
+ * @returns {?WebhookCredentials} Null if the URL is invalid, otherwise the id and the token
+ */
+function parseWebhookURL(url) {
+  const matches = url.match(
+    /https?:\/\/(?:ptb\.|canary\.)?discord\.com\/api(?:\/v\d{1,2})?\/webhooks\/(\d{17,19})\/([\w-]{68})/i,
+  );
+
+  if (!matches || matches.length <= 2) return null;
+
+  const [, id, token] = matches;
+  return {
+    id,
+    token,
+  };
+}
+
 module.exports = {
   flatten,
   escapeMarkdown,
@@ -541,7 +558,6 @@ module.exports = {
   fetchRecommendedShards,
   parseEmoji,
   resolvePartialEmoji,
-  cloneObject,
   mergeDefault,
   makeError,
   makePlainError,
@@ -554,6 +570,7 @@ module.exports = {
   cleanContent,
   cleanCodeBlockContent,
   lazy,
+  parseWebhookURL,
 };
 
 // Fixes Circular
