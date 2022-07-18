@@ -113,7 +113,6 @@ import {
   APIEmbedAuthor,
   APIEmbedFooter,
   APIEmbedImage,
-  APIEmbedVideo,
   VideoQualityMode,
   LocalizationMap,
   LocaleString,
@@ -122,6 +121,7 @@ import {
   APIChannel,
   ThreadAutoArchiveDuration,
   FormattingPatterns,
+  APIEmbedProvider,
 } from 'discord-api-types/v10';
 import { ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
@@ -494,7 +494,7 @@ export abstract class BaseGuild extends Base {
   protected constructor(client: Client, data: RawBaseGuildData);
   public get createdAt(): Date;
   public get createdTimestamp(): number;
-  public features: GuildFeature[];
+  public features: `${GuildFeature}`[];
   public icon: string | null;
   public id: Snowflake;
   public name: string;
@@ -667,12 +667,12 @@ export interface EmbedData {
   timestamp?: string | number | Date;
   color?: number;
   footer?: EmbedFooterData;
-  image?: EmbedImageData;
-  thumbnail?: EmbedImageData;
-  provider?: EmbedProviderData;
+  image?: EmbedAssetData;
+  thumbnail?: EmbedAssetData;
+  provider?: APIEmbedProvider;
   author?: EmbedAuthorData;
-  fields?: EmbedFieldData[];
-  video?: EmbedVideoData;
+  fields?: APIEmbedField[];
+  video?: EmbedAssetData;
 }
 
 export interface IconData {
@@ -684,16 +684,7 @@ export type EmbedAuthorData = Omit<APIEmbedAuthor, 'icon_url' | 'proxy_icon_url'
 
 export type EmbedFooterData = Omit<APIEmbedFooter, 'icon_url' | 'proxy_icon_url'> & IconData;
 
-export interface EmbedProviderData {
-  name?: string;
-  url?: string;
-}
-
-export interface EmbedImageData extends Omit<APIEmbedImage, 'proxy_url'> {
-  proxyURL?: string;
-}
-
-export interface EmbedVideoData extends Omit<APIEmbedVideo, 'proxy_url'> {
+export interface EmbedAssetData extends Omit<APIEmbedImage, 'proxy_url'> {
   proxyURL?: string;
 }
 
@@ -706,7 +697,7 @@ export class EmbedBuilder extends BuildersEmbed {
 export class Embed {
   private constructor(data: APIEmbed);
   public readonly data: Readonly<APIEmbed>;
-  public get fields(): APIEmbedField[] | null;
+  public get fields(): APIEmbedField[];
   public get footer(): EmbedFooterData | null;
   public get title(): string | null;
   public get description(): string | null;
@@ -714,11 +705,11 @@ export class Embed {
   public get color(): number | null;
   public get hexColor(): string | null;
   public get timestamp(): string | null;
-  public get thumbnail(): EmbedImageData | null;
-  public get image(): EmbedImageData | null;
+  public get thumbnail(): EmbedAssetData | null;
+  public get image(): EmbedAssetData | null;
   public get author(): EmbedAuthorData | null;
-  public get provider(): EmbedProviderData | null;
-  public get video(): EmbedVideoData | null;
+  public get provider(): APIEmbedProvider | null;
+  public get video(): EmbedAssetData | null;
   public get length(): number;
   public equals(other: Embed | APIEmbed): boolean;
   public toJSON(): APIEmbed;
@@ -1039,11 +1030,16 @@ export class ContextMenuCommandInteraction<Cached extends CacheType = CacheType>
   private resolveContextMenuOptions(data: APIApplicationCommandInteractionData): CommandInteractionOption<Cached>[];
 }
 
+export interface ResolvedFile {
+  data: Buffer;
+  contentType?: string;
+}
+
 export class DataResolver extends null {
   private constructor();
   public static resolveBase64(data: Base64Resolvable): string;
   public static resolveCode(data: string, regex: RegExp): string;
-  public static resolveFile(resource: BufferResolvable | Stream): Promise<Buffer>;
+  public static resolveFile(resource: BufferResolvable | Stream): Promise<ResolvedFile>;
   public static resolveImage(resource: BufferResolvable | Base64Resolvable): Promise<string | null>;
   public static resolveInviteCode(data: InviteResolvable): string;
   public static resolveGuildTemplateCode(data: GuildTemplateResolvable): string;
@@ -1339,7 +1335,7 @@ export class GuildPreview extends Base {
   public discoverySplash: string | null;
   public emojis: Collection<Snowflake, GuildPreviewEmoji>;
   public stickers: Collection<Snowflake, Sticker>;
-  public features: GuildFeature[];
+  public features: `${GuildFeature}`[];
   public icon: string | null;
   public id: Snowflake;
   public name: string;
@@ -1574,10 +1570,10 @@ export class InteractionWebhook extends PartialWebhookMixin() {
   public token: string;
   public send(options: string | MessagePayload | InteractionReplyOptions): Promise<Message>;
   public editMessage(
-    message: MessageResolvable,
+    message: MessageResolvable | '@original',
     options: string | MessagePayload | WebhookEditMessageOptions,
   ): Promise<Message>;
-  public fetchMessage(message: string): Promise<Message>;
+  public fetchMessage(message: Snowflake | '@original'): Promise<Message>;
 }
 
 export class Invite extends Base {
@@ -2294,7 +2290,7 @@ export class ShardingManager extends EventEmitter {
   public once(event: 'shardCreate', listener: (shard: Shard) => Awaitable<void>): this;
 }
 
-export interface FetchRecommendedShardsOptions {
+export interface FetchRecommendedShardCountOptions {
   guildsPerShard?: number;
   multipleOf?: number;
 }
@@ -2644,7 +2640,7 @@ export function escapeUnderline(text: string): string;
 export function escapeStrikethrough(text: string): string;
 export function escapeSpoiler(text: string): string;
 export function cleanCodeBlockContent(text: string): string;
-export function fetchRecommendedShards(token: string, options?: FetchRecommendedShardsOptions): Promise<number>;
+export function fetchRecommendedShardCount(token: string, options?: FetchRecommendedShardCountOptions): Promise<number>;
 export function flatten(obj: unknown, ...props: Record<string, boolean | string>[]): unknown;
 export function makeError(obj: MakeErrorOptions): Error;
 export function makePlainError(err: Error): MakeErrorOptions;
@@ -2808,6 +2804,13 @@ export class Webhook extends WebhookMixin() {
     applicationId: null;
     owner: User | APIUser;
   };
+
+  public editMessage(
+    message: MessageResolvable,
+    options: string | MessagePayload | WebhookEditMessageOptions,
+  ): Promise<Message>;
+  public fetchMessage(message: Snowflake, options?: WebhookFetchMessageOptions): Promise<Message>;
+  public send(options: string | MessagePayload | Omit<WebhookMessageOptions, 'flags'>): Promise<Message>;
 }
 
 export class WebhookClient extends WebhookMixin(BaseClient) {
@@ -3279,11 +3282,7 @@ export class BaseGuildEmojiManager extends CachedManager<Snowflake, GuildEmoji, 
   public resolveIdentifier(emoji: EmojiIdentifierResolvable): string | null;
 }
 
-export class CategoryChannelChildManager extends DataManager<
-  Snowflake,
-  NonCategoryGuildBasedChannel,
-  GuildChannelResolvable
-> {
+export class CategoryChannelChildManager extends DataManager<Snowflake, CategoryChildChannel, GuildChannelResolvable> {
   private constructor(channel: CategoryChannel);
 
   public channel: CategoryChannel;
@@ -4412,12 +4411,6 @@ export interface EmbedField {
   inline: boolean;
 }
 
-export interface EmbedFieldData {
-  name: string;
-  value: string;
-  inline?: boolean;
-}
-
 export type EmojiIdentifierResolvable = string | EmojiResolvable;
 
 export type EmojiResolvable = Snowflake | GuildEmoji | ReactionEmoji;
@@ -4754,7 +4747,7 @@ export interface GuildEditData {
   preferredLocale?: Locale | null;
   premiumProgressBarEnabled?: boolean;
   description?: string | null;
-  features?: GuildFeature[];
+  features?: `${GuildFeature}`[];
   reason?: string;
 }
 
@@ -4962,8 +4955,6 @@ export interface MakeErrorOptions {
   message: string;
   stack: string;
 }
-
-export type MemberMention = UserMention | `<@!${Snowflake}>`;
 
 export type ActionRowComponentOptions = ButtonComponentData | SelectMenuComponentData;
 
@@ -5433,7 +5424,7 @@ export type VoiceBasedChannel = Extract<Channel, { bitrate: number }>;
 
 export type GuildBasedChannel = Extract<Channel, { guild: Guild }>;
 
-export type NonCategoryGuildBasedChannel = Exclude<GuildBasedChannel, CategoryChannel>;
+export type CategoryChildChannel = Exclude<Extract<Channel, { parent: CategoryChannel | null }>, CategoryChannel>;
 
 export type NonThreadGuildBasedChannel = Exclude<GuildBasedChannel, AnyThreadChannel>;
 
