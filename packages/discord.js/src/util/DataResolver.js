@@ -66,7 +66,7 @@ class DataResolver extends null {
       return image;
     }
     const file = await this.resolveFile(image);
-    return this.resolveBase64(file);
+    return this.resolveBase64(file.data);
   }
 
   /**
@@ -116,7 +116,7 @@ class DataResolver extends null {
 
     if (typeof resource[Symbol.asyncIterator] === 'function') {
       const buffers = [];
-      for await (const data of resource) buffers.push(data);
+      for await (const data of resource) buffers.push(Buffer.from(data));
       return { data: Buffer.concat(buffers) };
     }
 

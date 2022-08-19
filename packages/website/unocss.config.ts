@@ -2,12 +2,17 @@ import presetWebFonts from '@unocss/preset-web-fonts';
 import { defineConfig, presetUno } from 'unocss';
 
 export default defineConfig({
+	theme: {
+		colors: {
+			blurple: '#5865F2',
+		},
+	},
 	presets: [
-		presetUno({ dark: 'media' }),
+		presetUno({ dark: 'class' }),
 		presetWebFonts({
 			provider: 'google',
 			fonts: {
-				sans: 'JetBrains Mono',
+				mono: ['JetBrains Mono', 'JetBrains Mono:400,600'],
 			},
 		}),
 	],

@@ -1,11 +1,11 @@
 name: Publish dev
 on:
-  workflow_dispatch:
   schedule:
     - cron: '0 */12 * * *'
+  workflow_dispatch:
 jobs:
-  npm:
-    name: npm
+  npm-publish:
+    name: npm publish
     strategy:
       fail-fast: false
       matrix:
@@ -22,7 +22,12 @@ jobs:
             folder: 'rest'
           - package: '@discordjs/voice'
             folder: 'voice'
+          - package: '@discordjs/ws'
+            folder: 'ws'
     runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
     if: github.repository_owner == 'discordjs'
     steps:
       - name: Checkout repository
@@ -34,42 +39,16 @@ jobs:
           node-version: 16
           registry-url: https://registry.npmjs.org/
           cache: 'yarn'
-          cache-dependency-path: yarn.lock
-
-      - name: Turbo cache
-        id: turbo-cache
-        uses: actions/cache@v3
-        with:
-          path: .turbo
-          key: turbo-${{ github.job }}-${{ github.ref_name }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ github.job }}-${{ github.ref_name }}-
-
-      - name: Check previous released version
-        id: pre-release
-        run: |
-          if [[ $(npm view ${{ matrix.package }}@dev version | grep -e "$(jq --raw-output '.version' packages/${{ matrix.folder }}/package.json)\..*-$(git rev-parse --short HEAD)") ]]; \
-          then echo '::set-output name=release::false'; \
-          else echo '::set-output name=release::true'; fi
 
       - name: Install dependencies
-        if: steps.pre-release.outputs.release == 'true'
         run: yarn --immutable
 
       - name: Build dependencies
-        if: steps.pre-release.outputs.release == 'true'
-        run: yarn build --cache-dir=".turbo"
+        run: yarn build
 
-      - name: Deprecate old versions
-        if: steps.pre-release.outputs.release == 'true'
-        run: npm deprecate ${{ matrix.package }}@"~$(jq --raw-output '.version' packages/${{ matrix.folder }}/package.json)" "no longer supported" || true
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
-
-      - name: Publish
-        if: steps.pre-release.outputs.release == 'true'
+      - name: Publish package
         run: |
-          yarn workspace ${{ matrix.package }} version $(jq --raw-output '.version' packages/${{ matrix.folder }}/package.json).$(date +%s)-$(git rev-parse --short HEAD)
+          yarn workspace ${{ matrix.package }} release --preid "dev.$(date +%s)-$(git rev-parse --short HEAD)"
           yarn workspace ${{ matrix.package }} npm publish --tag dev || true
         env:
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}

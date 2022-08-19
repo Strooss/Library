@@ -1,36 +1,63 @@
-import type { ReactNode } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { Group, Stack, Title, Text, Box, MediaQuery, Aside, ScrollArea } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
+import { Fragment, ReactNode } from 'react';
+import { VscListSelection, VscSymbolParameter } from 'react-icons/vsc';
+import { PrismAsyncLight as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import { HyperlinkedText } from './HyperlinkedText';
 import { Section } from './Section';
+import { TableOfContentsItems } from './TableOfContentsItems';
 import { TypeParamTable } from './TypeParamTable';
+import { TSDoc } from './tsdoc/TSDoc';
+import type { DocClass } from '~/DocModel/DocClass';
+import type { DocItem } from '~/DocModel/DocItem';
+import type { TypeParameterData } from '~/DocModel/TypeParameterMixin';
+import type { AnyDocNodeJSON } from '~/DocModel/comment/CommentNode';
 import { generateIcon } from '~/util/icon';
-import type { TokenDocumentation, TypeParameterData } from '~/util/parse.server';
+import type { TokenDocumentation } from '~/util/parse.server';
 
 export interface DocContainerProps {
 	name: string;
 	kind: string;
 	excerpt: string;
-	summary?: string | null;
+	summary?: ReturnType<DocItem['toJSON']>['summary'];
 	children?: ReactNode;
 	extendsTokens?: TokenDocumentation[] | null;
+	implementsTokens?: TokenDocumentation[][];
 	typeParams?: TypeParameterData[];
+	comment?: AnyDocNodeJSON | null;
+	methods?: ReturnType<DocClass['toJSON']>['methods'] | null;
 }
 
-export function DocContainer({ name, kind, excerpt, summary, typeParams, children, extendsTokens }: DocContainerProps) {
-	return (
-		<>
-			<div className="bg-white dark:bg-dark border-b-solid border-gray border-width-0.5 sticky top-0 px-10 py-2">
-				<h2 className="flex items-center font-mono break-all m-0 dark:text-white">
-					{generateIcon(kind, 'mr-2')}
-					{name}
-				</h2>
-			</div>
+export function DocContainer({
+	name,
+	kind,
+	excerpt,
+	summary,
+	typeParams,
+	children,
+	extendsTokens,
+	implementsTokens,
+	methods,
+}: DocContainerProps) {
+	const matches = useMediaQuery('(max-width: 768px)', true, { getInitialValueInEffect: false });
 
-			<div className="px-10 pt-5 pb-10">
-				<div>
+	return (
+		<Group>
+			<Stack sx={{ flexGrow: 1, maxWidth: '100%' }}>
+				<Title sx={{ wordBreak: 'break-all' }} order={2} ml="xs">
+					<Group>
+						{generateIcon(kind)}
+						{name}
+					</Group>
+				</Title>
+
+				<Section title="Summary" icon={<VscListSelection />} padded dense={matches}>
+					{summary ? <TSDoc node={summary} /> : <Text>No summary provided.</Text>}
+				</Section>
+
+				<Box px="xs" pb="xs">
 					<SyntaxHighlighter
-						wrapLines
 						wrapLongLines
 						language="typescript"
 						style={vscDarkPlus}
@@ -38,25 +65,58 @@ export function DocContainer({ name, kind, excerpt, summary, typeParams, childre
 					>
 						{excerpt}
 					</SyntaxHighlighter>
-				</div>
+				</Box>
+
 				{extendsTokens?.length ? (
-					<div className="flex flex-row items-center dark:text-white">
-						<h2 className="mr-5">Extends</h2>
-						<p className="font-mono">
+					<Group noWrap>
+						<Title order={3} ml="xs">
+							Extends
+						</Title>
+						<Text sx={{ wordBreak: 'break-all' }} className="font-mono">
 							<HyperlinkedText tokens={extendsTokens} />
-						</p>
-					</div>
+						</Text>
+					</Group>
 				) : null}
-				<Section title="Summary" className="dark:text-white">
-					<p className="text-dark-100 dark:text-gray-400">{summary ?? 'No summary provided.'}</p>
-				</Section>
-				{typeParams?.length ? (
-					<Section title="Type Parameters" className="dark:text-white">
-						<TypeParamTable data={typeParams} className="mb-5 p-3" />
-					</Section>
+
+				{implementsTokens?.length ? (
+					<Group noWrap>
+						<Title order={3} ml="xs">
+							Implements
+						</Title>
+						<Text sx={{ wordBreak: 'break-all' }} className="font-mono">
+							{implementsTokens.map((token, idx) => (
+								<Fragment key={idx}>
+									<HyperlinkedText tokens={token} />
+									{idx < implementsTokens.length - 1 ? ', ' : ''}
+								</Fragment>
+							))}
+						</Text>
+					</Group>
 				) : null}
-				<div>{children}</div>
-			</div>
-		</>
+
+				<Stack>
+					{typeParams?.length ? (
+						<Section title="Type Parameters" icon={<VscSymbolParameter />} padded dense={matches} defaultClosed>
+							<TypeParamTable data={typeParams} />
+						</Section>
+					) : null}
+					<Stack>{children}</Stack>
+				</Stack>
+			</Stack>
+			{kind === 'Class' && methods ? (
+				<MediaQuery smallerThan="md" styles={{ display: 'none' }}>
+					<Aside
+						sx={{ backgroundColor: 'transparent' }}
+						hiddenBreakpoint="md"
+						width={{ md: 200, lg: 300 }}
+						withBorder={false}
+					>
+						<ScrollArea p="xs">
+							<TableOfContentsItems members={methods}></TableOfContentsItems>
+						</ScrollArea>
+					</Aside>
+				</MediaQuery>
+			) : null}
+		</Group>
 	);
 }

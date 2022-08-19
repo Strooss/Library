@@ -122,6 +122,7 @@ import {
   ThreadAutoArchiveDuration,
   FormattingPatterns,
   APIEmbedProvider,
+  AuditLogOptionsType,
 } from 'discord-api-types/v10';
 import { ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
@@ -1082,6 +1083,7 @@ export class Guild extends AnonymousGuild {
   public afkChannelId: Snowflake | null;
   public afkTimeout: number;
   public applicationId: Snowflake | null;
+  public maxVideoChannelUsers: number | null;
   public approximateMemberCount: number | null;
   public approximatePresenceCount: number | null;
   public available: boolean;
@@ -1282,6 +1284,7 @@ export class GuildMember extends PartialTextBasedChannel(Base) {
   private constructor(client: Client, data: RawGuildMemberData, guild: Guild);
   public avatar: string | null;
   public get bannable(): boolean;
+  public get dmChannel(): DMChannel | null;
   public get displayColor(): number;
   public get displayHexColor(): HexColorString;
   public get displayName(): string;
@@ -1525,9 +1528,13 @@ export class BaseInteraction<Cached extends CacheType = CacheType> extends Base 
   public inCachedGuild(): this is BaseInteraction<'cached'>;
   public inRawGuild(): this is BaseInteraction<'raw'>;
   public isButton(): this is ButtonInteraction<Cached>;
+  public isAutocomplete(): this is AutocompleteInteraction<Cached>;
   public isChatInputCommand(): this is ChatInputCommandInteraction<Cached>;
+  public isCommand(): this is CommandInteraction<Cached>;
   public isContextMenuCommand(): this is ContextMenuCommandInteraction<Cached>;
+  public isMessageComponent(): this is MessageComponentInteraction<Cached>;
   public isMessageContextMenuCommand(): this is MessageContextMenuCommandInteraction<Cached>;
+  public isModalSubmit(): this is ModalSubmitInteraction<Cached>;
   public isUserContextMenuCommand(): this is UserContextMenuCommandInteraction<Cached>;
   public isSelectMenu(): this is SelectMenuInteraction<Cached>;
   public isRepliable(): this is this & InteractionResponseFields<Cached>;
@@ -1859,6 +1866,7 @@ export class MessageMentions {
   private _channels: Collection<Snowflake, Channel> | null;
   private readonly _content: string;
   private _members: Collection<Snowflake, GuildMember> | null;
+  private _parsedUsers: Collection<Snowflake, User> | null;
 
   public get channels(): Collection<Snowflake, Channel>;
   public readonly client: Client;
@@ -1866,14 +1874,16 @@ export class MessageMentions {
   public readonly guild: Guild;
   public has(data: UserResolvable | RoleResolvable | ChannelResolvable, options?: MessageMentionsHasOptions): boolean;
   public get members(): Collection<Snowflake, GuildMember> | null;
+  public get parsedUsers(): Collection<Snowflake, User>;
   public repliedUser: User | null;
   public roles: Collection<Snowflake, Role>;
   public users: Collection<Snowflake, User>;
   public crosspostedChannels: Collection<Snowflake, CrosspostedChannel>;
   public toJSON(): unknown;
 
-  public static ChannelsPattern: typeof FormattingPatterns.Channel;
   private static GlobalChannelsPattern: RegExp;
+  private static GlobalUsersPattern: RegExp;
+  public static ChannelsPattern: typeof FormattingPatterns.Channel;
   public static EveryonePattern: RegExp;
   public static RolesPattern: typeof FormattingPatterns.Role;
   public static UsersPattern: typeof FormattingPatterns.User;
@@ -1960,12 +1970,11 @@ export class ModalSubmitFields {
 export interface ModalMessageModalSubmitInteraction<Cached extends CacheType = CacheType>
   extends ModalSubmitInteraction<Cached> {
   message: Message<BooleanCache<Cached>>;
+  channelId: Snowflake;
   update(options: InteractionUpdateOptions & { fetchReply: true }): Promise<Message>;
   update(
     options: string | MessagePayload | InteractionUpdateOptions,
   ): Promise<InteractionResponse<BooleanCache<Cached>>>;
-  deferUpdate(options: InteractionDeferUpdateOptions & { fetchReply: true }): Promise<Message>;
-  deferUpdate(options?: InteractionDeferUpdateOptions): Promise<InteractionResponse<BooleanCache<Cached>>>;
   inGuild(): this is ModalMessageModalSubmitInteraction<'raw' | 'cached'>;
   inCachedGuild(): this is ModalMessageModalSubmitInteraction<'cached'>;
   inRawGuild(): this is ModalMessageModalSubmitInteraction<'raw'>;
@@ -1996,6 +2005,8 @@ export class ModalSubmitInteraction<Cached extends CacheType = CacheType> extend
   public deferReply(options?: InteractionDeferReplyOptions): Promise<InteractionResponse<BooleanCache<Cached>>>;
   public fetchReply(): Promise<Message<BooleanCache<Cached>>>;
   public followUp(options: string | MessagePayload | InteractionReplyOptions): Promise<Message<BooleanCache<Cached>>>;
+  public deferUpdate(options: InteractionDeferUpdateOptions & { fetchReply: true }): Promise<Message>;
+  public deferUpdate(options?: InteractionDeferUpdateOptions): Promise<InteractionResponse<BooleanCache<Cached>>>;
   public inGuild(): this is ModalSubmitInteraction<'raw' | 'cached'>;
   public inCachedGuild(): this is ModalSubmitInteraction<'cached'>;
   public inRawGuild(): this is ModalSubmitInteraction<'raw'>;
@@ -2530,7 +2541,7 @@ export class ThreadChannel extends TextBasedChannelMixin(BaseChannel, ['fetchWeb
     checkAdmin?: boolean,
   ): Readonly<PermissionsBitField> | null;
   public fetchOwner(options?: BaseFetchOptions): Promise<ThreadMember | null>;
-  public fetchStarterMessage(options?: BaseFetchOptions): Promise<Message>;
+  public fetchStarterMessage(options?: BaseFetchOptions): Promise<Message | null>;
   public setArchived(archived?: boolean, reason?: string): Promise<AnyThreadChannel>;
   public setAutoArchiveDuration(
     autoArchiveDuration: ThreadAutoArchiveDuration,
@@ -2693,24 +2704,41 @@ export function createComponentBuilder<T extends keyof MappedComponentBuilderTyp
 export function createComponentBuilder<C extends ComponentBuilder>(data: C): C;
 export function createComponentBuilder(data: APIMessageComponent | ComponentBuilder): ComponentBuilder;
 
+/** @deprecated This class is redundant as all methods of the class can be imported from discord.js directly. */
 export class Formatters extends null {
+  /** @deprecated Import this method directly from discord.js instead. */
   public static blockQuote: typeof blockQuote;
+  /** @deprecated Import this method directly from discord.js instead. */
   public static bold: typeof bold;
+  /** @deprecated Import this method directly from discord.js instead. */
   public static channelMention: typeof channelMention;
+  /** @deprecated Import this method directly from discord.js instead. */
   public static codeBlock: typeof codeBlock;
+  /** @deprecated Import this method directly from discord.js instead. */
   public static formatEmoji: typeof formatEmoji;
+  /** @deprecated Import this method directly from discord.js instead. */
   public static hideLinkEmbed: typeof hideLinkEmbed;
+  /** @deprecated Import this method directly from discord.js instead. */
   public static hyperlink: typeof hyperlink;
+  /** @deprecated Import this method directly from discord.js instead. */
   public static inlineCode: typeof inlineCode;
+  /** @deprecated Import this method directly from discord.js instead. */
   public static italic: typeof italic;
+  /** @deprecated Import this method directly from discord.js instead. */
   public static quote: typeof quote;
+  /** @deprecated Import this method directly from discord.js instead. */
   public static roleMention: typeof roleMention;
+  /** @deprecated Import this method directly from discord.js instead. */
   public static spoiler: typeof spoiler;
+  /** @deprecated Import this method directly from discord.js instead. */
   public static strikethrough: typeof strikethrough;
+  /** @deprecated Import this method directly from discord.js instead. */
   public static time: typeof time;
+  /** @deprecated Import this property directly from discord.js instead. */
   public static TimestampStyles: typeof TimestampStyles;
-  public static TimestampStylesString: TimestampStylesString;
+  /** @deprecated Import this method directly from discord.js instead. */
   public static underscore: typeof underscore;
+  /** @deprecated Import this method directly from discord.js instead. */
   public static userMention: typeof userMention;
 }
 
@@ -2996,152 +3024,152 @@ export const version: string;
 
 //#region Errors
 export enum DiscordjsErrorCodes {
-  ClientInvalidOption,
-  ClientInvalidProvidedShards,
-  ClientMissingIntents,
-  ClientNotReady,
+  ClientInvalidOption = 'ClientInvalidOption',
+  ClientInvalidProvidedShards = 'ClientInvalidProvidedShards',
+  ClientMissingIntents = 'ClientMissingIntents',
+  ClientNotReady = 'ClientNotReady',
 
-  TokenInvalid,
-  TokenMissing,
-  ApplicationCommandPermissionsTokenMissing,
+  TokenInvalid = 'TokenInvalid',
+  TokenMissing = 'TokenMissing',
+  ApplicationCommandPermissionsTokenMissing = 'ApplicationCommandPermissionsTokenMissing',
 
-  WSCloseRequested,
-  WSConnectionExists,
-  WSNotOpen,
-  ManagerDestroyed,
+  WSCloseRequested = 'WSCloseRequested',
+  WSConnectionExists = 'WSConnectionExists',
+  WSNotOpen = 'WSNotOpen',
+  ManagerDestroyed = 'ManagerDestroyed',
 
-  BitFieldInvalid,
+  BitFieldInvalid = 'BitFieldInvalid',
 
-  ShardingInvalid,
-  ShardingRequired,
-  InvalidIntents,
-  DisallowedIntents,
-  ShardingNoShards,
-  ShardingInProcess,
-  ShardingInvalidEvalBroadcast,
-  ShardingShardNotFound,
-  ShardingAlreadySpawned,
-  ShardingProcessExists,
-  ShardingWorkerExists,
-  ShardingReadyTimeout,
-  ShardingReadyDisconnected,
-  ShardingReadyDied,
-  ShardingNoChildExists,
-  ShardingShardMiscalculation,
+  ShardingInvalid = 'ShardingInvalid',
+  ShardingRequired = 'ShardingRequired',
+  InvalidIntents = 'InvalidIntents',
+  DisallowedIntents = 'DisallowedIntents',
+  ShardingNoShards = 'ShardingNoShards',
+  ShardingInProcess = 'ShardingInProcess',
+  ShardingInvalidEvalBroadcast = 'ShardingInvalidEvalBroadcast',
+  ShardingShardNotFound = 'ShardingShardNotFound',
+  ShardingAlreadySpawned = 'ShardingAlreadySpawned',
+  ShardingProcessExists = 'ShardingProcessExists',
+  ShardingWorkerExists = 'ShardingWorkerExists',
+  ShardingReadyTimeout = 'ShardingReadyTimeout',
+  ShardingReadyDisconnected = 'ShardingReadyDisconnected',
+  ShardingReadyDied = 'ShardingReadyDied',
+  ShardingNoChildExists = 'ShardingNoChildExists',
+  ShardingShardMiscalculation = 'ShardingShardMiscalculation',
 
-  ColorRange,
-  ColorConvert,
+  ColorRange = 'ColorRange',
+  ColorConvert = 'ColorConvert',
 
-  InviteOptionsMissingChannel,
+  InviteOptionsMissingChannel = 'InviteOptionsMissingChannel',
 
-  ButtonLabel,
-  ButtonURL,
-  ButtonCustomId,
+  ButtonLabel = 'ButtonLabel',
+  ButtonURL = 'ButtonURL',
+  ButtonCustomId = 'ButtonCustomId',
 
-  SelectMenuCustomId,
-  SelectMenuPlaceholder,
-  SelectOptionLabel,
-  SelectOptionValue,
-  SelectOptionDescription,
+  SelectMenuCustomId = 'SelectMenuCustomId',
+  SelectMenuPlaceholder = 'SelectMenuPlaceholder',
+  SelectOptionLabel = 'SelectOptionLabel',
+  SelectOptionValue = 'SelectOptionValue',
+  SelectOptionDescription = 'SelectOptionDescription',
 
-  InteractionCollectorError,
+  InteractionCollectorError = 'InteractionCollectorError',
 
-  FileNotFound,
+  FileNotFound = 'FileNotFound',
 
-  UserBannerNotFetched,
-  UserNoDMChannel,
+  UserBannerNotFetched = 'UserBannerNotFetched',
+  UserNoDMChannel = 'UserNoDMChannel',
 
-  VoiceNotStageChannel,
+  VoiceNotStageChannel = 'VoiceNotStageChannel',
 
-  VoiceStateNotOwn,
-  VoiceStateInvalidType,
+  VoiceStateNotOwn = 'VoiceStateNotOwn',
+  VoiceStateInvalidType = 'VoiceStateInvalidType',
 
-  ReqResourceType,
+  ReqResourceType = 'ReqResourceType',
 
-  ImageFormat,
-  ImageSize,
+  ImageFormat = 'ImageFormat',
+  ImageSize = 'ImageSize',
 
-  MessageBulkDeleteType,
-  MessageNonceType,
-  MessageContentType,
+  MessageBulkDeleteType = 'MessageBulkDeleteType',
+  MessageNonceType = 'MessageNonceType',
+  MessageContentType = 'MessageContentType',
 
-  SplitMaxLen,
+  SplitMaxLen = 'SplitMaxLen',
 
-  BanResolveId,
-  FetchBanResolveId,
+  BanResolveId = 'BanResolveId',
+  FetchBanResolveId = 'FetchBanResolveId',
 
-  PruneDaysType,
+  PruneDaysType = 'PruneDaysType',
 
-  GuildChannelResolve,
-  GuildVoiceChannelResolve,
-  GuildChannelOrphan,
-  GuildChannelUnowned,
-  GuildOwned,
-  GuildMembersTimeout,
-  GuildUncachedMe,
-  ChannelNotCached,
-  StageChannelResolve,
-  GuildScheduledEventResolve,
-  FetchOwnerId,
+  GuildChannelResolve = 'GuildChannelResolve',
+  GuildVoiceChannelResolve = 'GuildVoiceChannelResolve',
+  GuildChannelOrphan = 'GuildChannelOrphan',
+  GuildChannelUnowned = 'GuildChannelUnowned',
+  GuildOwned = 'GuildOwned',
+  GuildMembersTimeout = 'GuildMembersTimeout',
+  GuildUncachedMe = 'GuildUncachedMe',
+  ChannelNotCached = 'ChannelNotCached',
+  StageChannelResolve = 'StageChannelResolve',
+  GuildScheduledEventResolve = 'GuildScheduledEventResolve',
+  FetchOwnerId = 'FetchOwnerId',
 
-  InvalidType,
-  InvalidElement,
+  InvalidType = 'InvalidType',
+  InvalidElement = 'InvalidElement',
 
-  MessageThreadParent,
-  MessageExistingThread,
-  ThreadInvitableType,
+  MessageThreadParent = 'MessageThreadParent',
+  MessageExistingThread = 'MessageExistingThread',
+  ThreadInvitableType = 'ThreadInvitableType',
 
-  WebhookMessage,
-  WebhookTokenUnavailable,
-  WebhookURLInvalid,
-  WebhookApplication,
-  MessageReferenceMissing,
+  WebhookMessage = 'WebhookMessage',
+  WebhookTokenUnavailable = 'WebhookTokenUnavailable',
+  WebhookURLInvalid = 'WebhookURLInvalid',
+  WebhookApplication = 'WebhookApplication',
+  MessageReferenceMissing = 'MessageReferenceMissing',
 
-  EmojiType,
-  EmojiManaged,
-  MissingManageEmojisAndStickersPermission,
-  NotGuildSticker,
+  EmojiType = 'EmojiType',
+  EmojiManaged = 'EmojiManaged',
+  MissingManageEmojisAndStickersPermission = 'MissingManageEmojisAndStickersPermission',
+  NotGuildSticker = 'NotGuildSticker',
 
-  ReactionResolveUser,
+  ReactionResolveUser = 'ReactionResolveUser',
 
-  VanityURL,
+  VanityURL = 'VanityURL',
 
-  InviteResolveCode,
+  InviteResolveCode = 'InviteResolveCode',
 
-  InviteNotFound,
+  InviteNotFound = 'InviteNotFound',
 
-  DeleteGroupDMChannel,
-  FetchGroupDMChannel,
+  DeleteGroupDMChannel = 'DeleteGroupDMChannel',
+  FetchGroupDMChannel = 'FetchGroupDMChannel',
 
-  MemberFetchNonceLength,
+  MemberFetchNonceLength = 'MemberFetchNonceLength',
 
-  GlobalCommandPermissions,
-  GuildUncachedEntityResolve,
+  GlobalCommandPermissions = 'GlobalCommandPermissions',
+  GuildUncachedEntityResolve = 'GuildUncachedEntityResolve',
 
-  InteractionAlreadyReplied,
-  InteractionNotReplied,
-  InteractionEphemeralReplied,
+  InteractionAlreadyReplied = 'InteractionAlreadyReplied',
+  InteractionNotReplied = 'InteractionNotReplied',
+  InteractionEphemeralReplied = 'InteractionEphemeralReplied',
 
-  CommandInteractionOptionNotFound,
-  CommandInteractionOptionType,
-  CommandInteractionOptionEmpty,
-  CommandInteractionOptionNoSubcommand,
-  CommandInteractionOptionNoSubcommandGroup,
-  AutocompleteInteractionOptionNoFocusedOption,
+  CommandInteractionOptionNotFound = 'CommandInteractionOptionNotFound',
+  CommandInteractionOptionType = 'CommandInteractionOptionType',
+  CommandInteractionOptionEmpty = 'CommandInteractionOptionEmpty',
+  CommandInteractionOptionNoSubcommand = 'CommandInteractionOptionNoSubcommand',
+  CommandInteractionOptionNoSubcommandGroup = 'CommandInteractionOptionNoSubcommandGroup',
+  AutocompleteInteractionOptionNoFocusedOption = 'AutocompleteInteractionOptionNoFocusedOption',
 
-  ModalSubmitInteractionFieldNotFound,
-  ModalSubmitInteractionFieldType,
+  ModalSubmitInteractionFieldNotFound = 'ModalSubmitInteractionFieldNotFound',
+  ModalSubmitInteractionFieldType = 'ModalSubmitInteractionFieldType',
 
-  InvalidMissingScopes,
+  InvalidMissingScopes = 'InvalidMissingScopes',
 
-  NotImplemented,
+  NotImplemented = 'NotImplemented',
 
-  SweepFilterReturn,
+  SweepFilterReturn = 'SweepFilterReturn',
 }
 
 export interface DiscordjsErrorFields<Name extends string> {
-  readonly name: `${Name} [${keyof typeof DiscordjsErrorCodes}]`;
-  get code(): keyof typeof DiscordjsErrorCodes;
+  readonly name: `${Name} [${DiscordjsErrorCodes}]`;
+  get code(): DiscordjsErrorCodes;
 }
 
 export function DiscordjsErrorMixin<T, N extends string>(
@@ -3379,6 +3407,12 @@ export class GuildManager extends CachedManager<Snowflake, Guild, GuildResolvabl
   public fetch(options?: FetchGuildsOptions): Promise<Collection<Snowflake, OAuth2Guild>>;
 }
 
+export interface AddOrRemoveGuildMemberRoleOptions {
+  user: GuildMemberResolvable;
+  role: RoleResolvable;
+  reason?: string;
+}
+
 export class GuildMemberManager extends CachedManager<Snowflake, GuildMember, GuildMemberResolvable> {
   private constructor(guild: Guild, iterable?: Iterable<RawGuildMemberData>);
   public guild: Guild;
@@ -3401,6 +3435,8 @@ export class GuildMemberManager extends CachedManager<Snowflake, GuildMember, Gu
   public prune(options?: GuildPruneMembersOptions): Promise<number>;
   public search(options: GuildSearchMembersOptions): Promise<Collection<Snowflake, GuildMember>>;
   public unban(user: UserResolvable, reason?: string): Promise<User | null>;
+  public addRole(options: AddOrRemoveGuildMemberRoleOptions): Promise<GuildMember | User | Snowflake>;
+  public removeRole(options: AddOrRemoveGuildMemberRoleOptions): Promise<GuildMember | User | Snowflake>;
 }
 
 export class GuildBanManager extends CachedManager<Snowflake, GuildBan, GuildBanResolvable> {
@@ -3631,7 +3667,7 @@ export interface TextBasedChannelFields extends PartialTextBasedChannelFields {
   bulkDelete(
     messages: Collection<Snowflake, Message> | readonly MessageResolvable[] | number,
     filterOld?: boolean,
-  ): Promise<Collection<Snowflake, Message>>;
+  ): Promise<Collection<Snowflake, Message | PartialMessage | undefined>>;
   createMessageComponentCollector<T extends MessageComponentType>(
     options?: MessageChannelCollectorOptionsParams<T, true>,
   ): InteractionCollector<MappedInteractionTypes[T]>;
@@ -3768,15 +3804,67 @@ export interface ApplicationCommandChannelOption extends BaseApplicationCommandO
   channelTypes?: ChannelType[];
 }
 
+export interface ApplicationCommandRoleOptionData extends BaseApplicationCommandOptionsData {
+  type: ApplicationCommandOptionType.Role;
+}
+
+export interface ApplicationCommandRoleOption extends BaseApplicationCommandOptionsData {
+  type: ApplicationCommandOptionType.Role;
+}
+
+export interface ApplicationCommandUserOptionData extends BaseApplicationCommandOptionsData {
+  type: ApplicationCommandOptionType.User;
+}
+
+export interface ApplicationCommandUserOption extends BaseApplicationCommandOptionsData {
+  type: ApplicationCommandOptionType.User;
+}
+
+export interface ApplicationCommandMentionableOptionData extends BaseApplicationCommandOptionsData {
+  type: ApplicationCommandOptionType.Mentionable;
+}
+
+export interface ApplicationCommandMentionableOption extends BaseApplicationCommandOptionsData {
+  type: ApplicationCommandOptionType.Mentionable;
+}
+
 export interface ApplicationCommandAttachmentOption extends BaseApplicationCommandOptionsData {
   type: ApplicationCommandOptionType.Attachment;
 }
 
-export interface ApplicationCommandAutocompleteOption extends Omit<BaseApplicationCommandOptionsData, 'autocomplete'> {
-  type:
-    | ApplicationCommandOptionType.String
-    | ApplicationCommandOptionType.Number
-    | ApplicationCommandOptionType.Integer;
+export interface ApplicationCommandAutocompleteNumericOption
+  extends Omit<BaseApplicationCommandOptionsData, 'autocomplete'> {
+  type: CommandOptionNumericResolvableType;
+  minValue?: number;
+  maxValue?: number;
+  autocomplete: true;
+}
+
+export interface ApplicationCommandAutocompleteStringOption
+  extends Omit<BaseApplicationCommandOptionsData, 'autocomplete'> {
+  type: ApplicationCommandOptionType.String;
+  minLength?: number;
+  maxLength?: number;
+  autocomplete: true;
+}
+
+export interface ApplicationCommandAutocompleteNumericOptionData
+  extends Omit<BaseApplicationCommandOptionsData, 'autocomplete'> {
+  type: CommandOptionNumericResolvableType;
+  minValue?: number;
+  min_value?: number;
+  maxValue?: number;
+  max_value?: number;
+  autocomplete: true;
+}
+
+export interface ApplicationCommandAutocompleteStringOptionData
+  extends Omit<BaseApplicationCommandOptionsData, 'autocomplete'> {
+  type: ApplicationCommandOptionType.String;
+  minLength?: number;
+  min_length?: number;
+  maxLength?: number;
+  max_length?: number;
   autocomplete: true;
 }
 
@@ -3808,6 +3896,10 @@ export interface ApplicationCommandStringOptionData extends ApplicationCommandCh
   max_length?: number;
 }
 
+export interface ApplicationCommandBooleanOptionData extends BaseApplicationCommandOptionsData {
+  type: ApplicationCommandOptionType.Boolean;
+}
+
 export interface ApplicationCommandNumericOption extends ApplicationCommandChoicesOption {
   type: CommandOptionNumericResolvableType;
   minValue?: number;
@@ -3818,6 +3910,10 @@ export interface ApplicationCommandStringOption extends ApplicationCommandChoice
   type: ApplicationCommandOptionType.String;
   minLength?: number;
   maxLength?: number;
+}
+
+export interface ApplicationCommandBooleanOption extends BaseApplicationCommandOptionsData {
+  type: ApplicationCommandOptionType.Boolean;
 }
 
 export interface ApplicationCommandSubGroupData extends Omit<BaseApplicationCommandOptionsData, 'required'> {
@@ -3832,19 +3928,12 @@ export interface ApplicationCommandSubGroup extends Omit<BaseApplicationCommandO
 
 export interface ApplicationCommandSubCommandData extends Omit<BaseApplicationCommandOptionsData, 'required'> {
   type: ApplicationCommandOptionType.Subcommand;
-  options?: (
-    | ApplicationCommandChoicesData
-    | ApplicationCommandNonOptionsData
-    | ApplicationCommandChannelOptionData
-    | ApplicationCommandAutocompleteOption
-    | ApplicationCommandNumericOptionData
-    | ApplicationCommandStringOptionData
-  )[];
+  options?: Exclude<ApplicationCommandOptionData, ApplicationCommandSubGroupData | ApplicationCommandSubCommandData>[];
 }
 
 export interface ApplicationCommandSubCommand extends Omit<BaseApplicationCommandOptionsData, 'required'> {
   type: ApplicationCommandOptionType.Subcommand;
-  options?: (ApplicationCommandChoicesOption | ApplicationCommandNonOptions | ApplicationCommandChannelOption)[];
+  options?: Exclude<ApplicationCommandOption, ApplicationCommandSubGroup | ApplicationCommandSubCommand>[];
 }
 
 export interface ApplicationCommandNonOptionsData extends BaseApplicationCommandOptionsData {
@@ -3860,18 +3949,29 @@ export type ApplicationCommandOptionData =
   | ApplicationCommandNonOptionsData
   | ApplicationCommandChannelOptionData
   | ApplicationCommandChoicesData
-  | ApplicationCommandAutocompleteOption
+  | ApplicationCommandAutocompleteNumericOptionData
+  | ApplicationCommandAutocompleteStringOptionData
   | ApplicationCommandNumericOptionData
   | ApplicationCommandStringOptionData
+  | ApplicationCommandRoleOptionData
+  | ApplicationCommandUserOptionData
+  | ApplicationCommandMentionableOptionData
+  | ApplicationCommandBooleanOptionData
   | ApplicationCommandSubCommandData;
 
 export type ApplicationCommandOption =
   | ApplicationCommandSubGroup
+  | ApplicationCommandAutocompleteNumericOption
+  | ApplicationCommandAutocompleteStringOption
   | ApplicationCommandNonOptions
   | ApplicationCommandChannelOption
   | ApplicationCommandChoicesOption
   | ApplicationCommandNumericOption
   | ApplicationCommandStringOption
+  | ApplicationCommandRoleOption
+  | ApplicationCommandUserOption
+  | ApplicationCommandMentionableOption
+  | ApplicationCommandBooleanOption
   | ApplicationCommandAttachmentOption
   | ApplicationCommandSubCommand;
 
@@ -4096,7 +4196,7 @@ export interface ClientEvents {
     reactions: Collection<string | Snowflake, MessageReaction>,
   ];
   messageReactionRemoveEmoji: [reaction: MessageReaction | PartialMessageReaction];
-  messageDeleteBulk: [messages: Collection<Snowflake, Message | PartialMessage>, channel: TextBasedChannel];
+  messageDeleteBulk: [messages: Collection<Snowflake, Message | PartialMessage>, channel: GuildTextBasedChannel];
   messageReactionAdd: [reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser];
   messageReactionRemove: [reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser];
   messageUpdate: [oldMessage: Message | PartialMessage, newMessage: Message | PartialMessage];
@@ -4618,18 +4718,18 @@ export interface GuildAuditLogsEntryExtraField {
   [AuditLogEvent.ChannelOverwriteCreate]:
     | Role
     | GuildMember
-    | { id: Snowflake; name: string; type: 'Role' }
-    | { id: Snowflake; type: 'Member' };
+    | { id: Snowflake; name: string; type: AuditLogOptionsType.Role }
+    | { id: Snowflake; type: AuditLogOptionsType.Member };
   [AuditLogEvent.ChannelOverwriteUpdate]:
     | Role
     | GuildMember
-    | { id: Snowflake; name: string; type: 'Role' }
-    | { id: Snowflake; type: 'Member' };
+    | { id: Snowflake; name: string; type: AuditLogOptionsType.Role }
+    | { id: Snowflake; type: AuditLogOptionsType.Member };
   [AuditLogEvent.ChannelOverwriteDelete]:
     | Role
     | GuildMember
-    | { id: Snowflake; name: string; type: OverwriteType.Role }
-    | { id: Snowflake; type: OverwriteType.Member };
+    | { id: Snowflake; name: string; type: AuditLogOptionsType.Role }
+    | { id: Snowflake; type: AuditLogOptionsType.Member };
   [AuditLogEvent.StageInstanceCreate]: StageChannel | { id: Snowflake };
   [AuditLogEvent.StageInstanceDelete]: StageChannel | { id: Snowflake };
   [AuditLogEvent.StageInstanceUpdate]: StageChannel | { id: Snowflake };
@@ -4706,7 +4806,7 @@ export interface GuildChannelEditOptions {
 
 export interface GuildChannelOverwriteOptions {
   reason?: string;
-  type?: number;
+  type?: OverwriteType;
 }
 
 export interface GuildCreateOptions {
@@ -5597,4 +5697,4 @@ export type InternalDiscordGatewayAdapterCreator = (
 // External
 export * from 'discord-api-types/v10';
 export * from '@discordjs/builders';
-export { DiscordAPIError, HTTPError, RateLimitError } from '@discordjs/rest';
+export * from '@discordjs/rest';

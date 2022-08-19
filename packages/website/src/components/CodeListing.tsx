@@ -1,5 +1,9 @@
+import { Badge, Group, Stack, Title } from '@mantine/core';
 import type { ReactNode } from 'react';
 import { HyperlinkedText } from './HyperlinkedText';
+import { TSDoc } from './tsdoc/TSDoc';
+import type { DocItem } from '~/DocModel/DocItem';
+import type { AnyDocNodeJSON } from '~/DocModel/comment/CommentNode';
 import type { TokenDocumentation } from '~/util/parse.server';
 
 export enum CodeListingSeparatorType {
@@ -7,36 +11,54 @@ export enum CodeListingSeparatorType {
 	Value = '=',
 }
 
-export interface CodeListingProps {
-	name: string;
-	summary?: string | null;
-	typeTokens: TokenDocumentation[];
-	separator?: CodeListingSeparatorType;
-	children?: ReactNode;
-	className?: string | undefined;
-}
-
 export function CodeListing({
 	name,
-	className,
 	separator = CodeListingSeparatorType.Type,
-	summary,
 	typeTokens,
+	readonly = false,
+	optional = false,
+	summary,
 	children,
-}: CodeListingProps) {
+	comment,
+	deprecation,
+}: {
+	name: string;
+	separator?: CodeListingSeparatorType;
+	typeTokens: TokenDocumentation[];
+	readonly?: boolean;
+	optional?: boolean;
+	summary?: ReturnType<DocItem['toJSON']>['summary'];
+	comment?: AnyDocNodeJSON | null;
+	children?: ReactNode;
+	deprecation?: AnyDocNodeJSON | null;
+}) {
 	return (
-		<div className={className}>
-			<div key={name} className="flex flex-col mb-2 ml-3">
-				<div className="w-full flex flex-row">
-					<h4 className="font-mono my-0">{`${name}`}</h4>
-					<h4 className="mx-3 my-0">{separator}</h4>
-					<h4 className="font-mono text-blue-800 dark:text-blue-400 my-0">
-						<HyperlinkedText tokens={typeTokens} />
-					</h4>
-				</div>
-				{summary && <p className="text-dark-100 mt-2">{summary}</p>}
-				{children}
-			</div>
-		</div>
+		<Stack spacing="xs" key={name}>
+			<Group>
+				{deprecation ? (
+					<Badge variant="filled" color="red">
+						Deprecated
+					</Badge>
+				) : null}
+				{readonly ? <Badge variant="filled">Readonly</Badge> : null}
+				{optional ? <Badge variant="filled">Optional</Badge> : null}
+				<Title order={4} className="font-mono">
+					{name}
+					{optional ? '?' : ''}
+				</Title>
+				<Title order={4}>{separator}</Title>
+				<Title sx={{ wordBreak: 'break-all' }} order={4} className="font-mono">
+					<HyperlinkedText tokens={typeTokens} />
+				</Title>
+			</Group>
+			<Group>
+				<Stack>
+					{deprecation ? <TSDoc node={deprecation} /> : null}
+					{summary && <TSDoc node={summary} />}
+					{comment && <TSDoc node={comment} />}
+					{children}
+				</Stack>
+			</Group>
+		</Stack>
 	);
 }

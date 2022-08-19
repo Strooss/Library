@@ -1,8 +1,6 @@
+import { Anchor, Text } from '@mantine/core';
+import Link from 'next/link';
 import type { TokenDocumentation } from '~/util/parse.server';
-
-export interface HyperlinkedTextProps {
-	tokens: TokenDocumentation[];
-}
 
 /**
  * Constructs a hyperlinked html node based on token type references
@@ -11,19 +9,25 @@ export interface HyperlinkedTextProps {
  *
  * @returns An array of JSX elements and string comprising the hyperlinked text
  */
-export function HyperlinkedText({ tokens }: HyperlinkedTextProps) {
+export function HyperlinkedText({ tokens }: { tokens: TokenDocumentation[] }) {
 	return (
 		<>
-			{tokens.map((token) => {
+			{tokens.map((token, idx) => {
 				if (token.path) {
 					return (
-						<a key={token.text} href={token.path}>
-							{token.text}
-						</a>
+						<Link key={idx} href={token.path} passHref>
+							<Anchor component="a" inherit>
+								{token.text}
+							</Anchor>
+						</Link>
 					);
 				}
 
-				return token.text;
+				return (
+					<Text key={idx} span unstyled>
+						{token.text}
+					</Text>
+				);
 			})}
 		</>
 	);
