@@ -3,8 +3,7 @@ import type { ReactNode } from 'react';
 import { HyperlinkedText } from './HyperlinkedText';
 import { InheritanceText } from './InheritanceText';
 import { TSDoc } from './tsdoc/TSDoc';
-import type { DocItem } from '~/DocModel/DocItem';
-import type { InheritanceData } from '~/DocModel/DocMethod';
+import type { ApiItemJSON, InheritanceData } from '~/DocModel/ApiNodeJSONEncoder';
 import type { AnyDocNodeJSON } from '~/DocModel/comment/CommentNode';
 import type { TokenDocumentation } from '~/util/parse.server';
 
@@ -30,14 +29,14 @@ export function CodeListing({
 	typeTokens: TokenDocumentation[];
 	readonly?: boolean;
 	optional?: boolean;
-	summary?: ReturnType<DocItem['toJSON']>['summary'];
+	summary?: ApiItemJSON['summary'];
 	comment?: AnyDocNodeJSON | null;
 	children?: ReactNode;
 	deprecation?: AnyDocNodeJSON | null;
 	inheritanceData?: InheritanceData | null;
 }) {
 	return (
-		<Stack spacing="xs" key={name}>
+		<Stack id={name} className="scroll-mt-30" spacing="xs">
 			<Group>
 				{deprecation ? (
 					<Badge variant="filled" color="red">

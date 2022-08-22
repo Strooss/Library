@@ -25,7 +25,7 @@ import { type PropsWithChildren, useState } from 'react';
 import { VscChevronDown, VscPackage } from 'react-icons/vsc';
 import { WiDaySunny, WiNightClear } from 'react-icons/wi';
 import { SidebarItems } from './SidebarItems';
-import type { DocItem } from '~/DocModel/DocItem';
+import type { ApiItemJSON } from '~/DocModel/ApiNodeJSONEncoder';
 import type { findMember } from '~/util/model.server';
 import type { getMembers } from '~/util/parse.server';
 
@@ -36,7 +36,7 @@ export interface SidebarLayoutProps {
 		member: ReturnType<typeof findMember>;
 	};
 
-	selectedMember?: ReturnType<DocItem['toJSON']> | undefined;
+	selectedMember?: ApiItemJSON | undefined;
 }
 
 export type Members = SidebarLayoutProps['data']['members'];
@@ -92,12 +92,12 @@ export function SidebarLayout({ packageName, data, children }: PropsWithChildren
 	const { classes } = useStyles({ opened: openedPicker });
 
 	const libraryMenuItems = libraries.map((item) => (
-		<Menu.Item key={item.label} component={NextLink} href={`/docs/main/packages/${item.value}`}>
+		<Menu.Item key={item.label} component={NextLink} href={`/docs/packages/${item.value}/main`}>
 			{item.label}
 		</Menu.Item>
 	));
 
-	const asPathWithoutQuery = router.asPath.split('?')[0];
+	const asPathWithoutQuery = router.asPath.split('?')[0]?.split('#')[0];
 	const breadcrumbs = asPathWithoutQuery?.split('/').map((path, idx, original) => (
 		<Link key={idx} href={original.slice(0, idx + 1).join('/')} passHref>
 			<Anchor component="a">{path}</Anchor>
@@ -109,6 +109,7 @@ export function SidebarLayout({ packageName, data, children }: PropsWithChildren
 			styles={{
 				main: {
 					background: theme.colorScheme === 'dark' ? theme.colors.dark![8] : theme.colors.gray![0],
+					overflowX: 'auto',
 				},
 			}}
 			navbarOffsetBreakpoint="sm"
@@ -129,8 +130,8 @@ export function SidebarLayout({ packageName, data, children }: PropsWithChildren
 											<UnstyledButton className={classes.control}>
 												<Group position="apart">
 													<Group>
-														<ThemeIcon variant="outline" size={30}>
-															<VscPackage />
+														<ThemeIcon size={30}>
+															<VscPackage size={20} />
 														</ThemeIcon>
 														<Text weight="600" size="md">
 															{packageName}

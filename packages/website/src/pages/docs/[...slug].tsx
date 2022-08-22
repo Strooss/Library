@@ -1,15 +1,17 @@
-/* eslint-disable @typescript-eslint/no-throw-literal */
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Box } from '@mantine/core';
-import { ApiFunction } from '@microsoft/api-extractor-model';
+import { ApiFunction, ApiPackage } from '@microsoft/api-extractor-model';
+import Head from 'next/head';
 import type { GetStaticPaths, GetStaticProps } from 'next/types';
-import type { DocClass } from '~/DocModel/DocClass';
-import type { DocEnum } from '~/DocModel/DocEnum';
-import type { DocFunction } from '~/DocModel/DocFunction';
-import type { DocInterface } from '~/DocModel/DocInterface';
-import type { DocTypeAlias } from '~/DocModel/DocTypeAlias';
-import type { DocVariable } from '~/DocModel/DocVariable';
+import type {
+	ApiClassJSON,
+	ApiEnumJSON,
+	ApiFunctionJSON,
+	ApiInterfaceJSON,
+	ApiTypeAliasJSON,
+	ApiVariableJSON,
+} from '~/DocModel/ApiNodeJSONEncoder';
 import { SidebarLayout, type SidebarLayoutProps } from '~/components/SidebarLayout';
 import { Class } from '~/components/model/Class';
 import { Enum } from '~/components/model/Enum';
@@ -29,7 +31,8 @@ export const getStaticPaths: GetStaticPaths = async () => {
 		await Promise.all(
 			packages.map(async (packageName) => {
 				try {
-					let data;
+					let data: any[] = [];
+					let versions: string[] = [];
 					if (process.env.NEXT_PUBLIC_LOCAL_DEV) {
 						const res = await readFile(
 							join(__dirname, '..', '..', '..', '..', '..', packageName, 'docs', 'docs.api.json'),
@@ -38,16 +41,51 @@ export const getStaticPaths: GetStaticPaths = async () => {
 						// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 						data = JSON.parse(res);
 					} else {
-						const res = await fetch(`https://docs.discordjs.dev/docs/${packageName}/main.api.json`);
+						const response = await fetch(`https://docs.discordjs.dev/api/info?package=${packageName}`);
 						// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-						data = await res.json();
+						versions = await response.json();
+
+						for (const version of versions) {
+							const res = await fetch(`https://docs.discordjs.dev/docs/${packageName}/${version}.api.json`);
+							// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+							data = [...data, await res.json()];
+						}
+					}
+
+					if (Array.isArray(data)) {
+						const models = data.map((d) => createApiModel(d));
+						const pkgs = models.map((model) => findPackage(model, packageName)) as ApiPackage[];
+
+						return [
+							{ params: { slug: ['packages', packageName, 'main'] } },
+							...versions.map((version) => ({ params: { slug: ['packages', packageName, version] } })),
+							...pkgs
+								.map((pkg, idx) =>
+									getMembers(pkg)
+										// Filtering out enum `RESTEvents` because of interface with similar name `RestEvents`
+										// causing next.js export to error
+										.filter((member) => member.name !== 'RESTEvents')
+										.map((member) => {
+											if (member.kind === 'Function' && member.overloadIndex && member.overloadIndex > 1) {
+												return {
+													params: {
+														slug: ['packages', packageName, versions[idx]!, `${member.name}:${member.overloadIndex}`],
+													},
+												};
+											}
+
+											return { params: { slug: ['packages', packageName, versions[idx]!, member.name] } };
+										}),
+								)
+								.flat(),
+						];
 					}
 
 					const model = createApiModel(data);
 					const pkg = findPackage(model, packageName);
 
 					return [
-						{ params: { slug: ['main', 'packages', packageName] } },
+						{ params: { slug: ['packages', packageName, 'main'] } },
 						...getMembers(pkg!)
 							// Filtering out enum `RESTEvents` because of interface with similar name `RestEvents`
 							// causing next.js export to error
@@ -56,16 +94,16 @@ export const getStaticPaths: GetStaticPaths = async () => {
 								if (member.kind === 'Function' && member.overloadIndex && member.overloadIndex > 1) {
 									return {
 										params: {
-											slug: ['main', 'packages', packageName, `${member.name}:${member.overloadIndex}`],
+											slug: ['packages', packageName, 'main', `${member.name}:${member.overloadIndex}`],
 										},
 									};
 								}
 
-								return { params: { slug: ['main', 'packages', packageName, member.name] } };
+								return { params: { slug: ['packages', packageName, 'main', member.name] } };
 							}),
 					];
 				} catch {
-					return { params: { slug: ['', '', '', ''] } };
+					return { params: { slug: [] } };
 				}
 			}),
 		)
@@ -78,7 +116,7 @@ export const getStaticPaths: GetStaticPaths = async () => {
 };
 
 export const getStaticProps: GetStaticProps = async ({ params }) => {
-	const [branchName = 'main', , packageName = 'builders', member = 'ActionRowBuilder'] = params!.slug as string[];
+	const [, packageName = 'builders', branchName = 'main', member = 'ActionRowBuilder'] = params!.slug as string[];
 
 	const [memberName, overloadIndex] = member.split(':') as [string, string | undefined];
 
@@ -100,7 +138,7 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
 		const model = createApiModel(data);
 		const pkg = findPackage(model, packageName);
 
-		let { containerKey, name } = findMember(model, packageName, memberName) ?? {};
+		let { containerKey, name } = findMember(model, packageName, memberName, branchName) ?? {};
 		if (name && overloadIndex) {
 			containerKey = ApiFunction.getContainerKey(name, parseInt(overloadIndex, 10));
 		}
@@ -109,9 +147,9 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
 			props: {
 				packageName,
 				data: {
-					members: pkg ? getMembers(pkg) : [],
+					members: pkg ? getMembers(pkg, branchName) : [],
 					member:
-						memberName && containerKey ? findMemberByKey(model, packageName, containerKey)?.toJSON() ?? null : null,
+						memberName && containerKey ? findMemberByKey(model, packageName, containerKey, branchName) ?? null : null,
 				},
 			},
 		};
@@ -128,17 +166,17 @@ const member = (props: any) => {
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 	switch (props.kind) {
 		case 'Class':
-			return <Class data={props as ReturnType<DocClass['toJSON']>} />;
+			return <Class data={props as ApiClassJSON} />;
 		case 'Function':
-			return <Function data={props as ReturnType<DocFunction['toJSON']>} />;
+			return <Function data={props as ApiFunctionJSON} />;
 		case 'Interface':
-			return <Interface data={props as ReturnType<DocInterface['toJSON']>} />;
+			return <Interface data={props as ApiInterfaceJSON} />;
 		case 'TypeAlias':
-			return <TypeAlias data={props as ReturnType<DocTypeAlias['toJSON']>} />;
+			return <TypeAlias data={props as ApiTypeAliasJSON} />;
 		case 'Variable':
-			return <Variable data={props as ReturnType<DocVariable['toJSON']>} />;
+			return <Variable data={props as ApiVariableJSON} />;
 		case 'Enum':
-			return <Enum data={props as ReturnType<DocEnum['toJSON']>} />;
+			return <Enum data={props as ApiEnumJSON} />;
 		default:
 			return <Box>Cannot render that item type</Box>;
 	}
@@ -149,7 +187,16 @@ export default function Slug(props: Partial<SidebarLayoutProps & { error?: strin
 		<Box sx={{ display: 'flex', maxWidth: '100%', height: '100%' }}>{props.error}</Box>
 	) : (
 		<MemberProvider member={props.data?.member}>
-			<SidebarLayout {...props}>{props.data?.member ? member(props.data.member) : null}</SidebarLayout>
+			<SidebarLayout {...props}>
+				{props.data?.member ? (
+					<>
+						<Head>
+							<title key="title">discord.js | {props.data.member.name}</title>
+						</Head>
+						{member(props.data.member)}
+					</>
+				) : null}
+			</SidebarLayout>
 		</MemberProvider>
 	);
 }

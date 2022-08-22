@@ -6,11 +6,10 @@ import { PrismAsyncLight as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import { HyperlinkedText } from './HyperlinkedText';
 import { Section } from './Section';
-import { TableOfContentsItems } from './TableOfContentsItems';
+import { TableOfContentItems } from './TableOfContentItems';
 import { TypeParamTable } from './TypeParamTable';
 import { TSDoc } from './tsdoc/TSDoc';
-import type { DocClass } from '~/DocModel/DocClass';
-import type { DocItem } from '~/DocModel/DocItem';
+import type { ApiClassJSON, ApiInterfaceJSON, ApiItemJSON } from '~/DocModel/ApiNodeJSONEncoder';
 import type { TypeParameterData } from '~/DocModel/TypeParameterMixin';
 import type { AnyDocNodeJSON } from '~/DocModel/comment/CommentNode';
 import { generateIcon } from '~/util/icon';
@@ -20,13 +19,14 @@ export interface DocContainerProps {
 	name: string;
 	kind: string;
 	excerpt: string;
-	summary?: ReturnType<DocItem['toJSON']>['summary'];
+	summary?: ApiItemJSON['summary'];
 	children?: ReactNode;
 	extendsTokens?: TokenDocumentation[] | null;
 	implementsTokens?: TokenDocumentation[][];
 	typeParams?: TypeParameterData[];
 	comment?: AnyDocNodeJSON | null;
-	methods?: ReturnType<DocClass['toJSON']>['methods'] | null;
+	methods?: ApiClassJSON['methods'] | ApiInterfaceJSON['methods'] | null;
+	properties?: ApiClassJSON['properties'] | ApiInterfaceJSON['properties'] | null;
 }
 
 export function DocContainer({
@@ -39,6 +39,7 @@ export function DocContainer({
 	extendsTokens,
 	implementsTokens,
 	methods,
+	properties,
 }: DocContainerProps) {
 	const matches = useMediaQuery('(max-width: 768px)', true, { getInitialValueInEffect: false });
 
@@ -52,7 +53,7 @@ export function DocContainer({
 					</Group>
 				</Title>
 
-				<Section title="Summary" icon={<VscListSelection />} padded dense={matches}>
+				<Section title="Summary" icon={<VscListSelection size={20} />} padded dense={matches}>
 					{summary ? <TSDoc node={summary} /> : <Text>No summary provided.</Text>}
 				</Section>
 
@@ -96,14 +97,20 @@ export function DocContainer({
 
 				<Stack>
 					{typeParams?.length ? (
-						<Section title="Type Parameters" icon={<VscSymbolParameter />} padded dense={matches} defaultClosed>
+						<Section
+							title="Type Parameters"
+							icon={<VscSymbolParameter size={20} />}
+							padded
+							dense={matches}
+							defaultClosed
+						>
 							<TypeParamTable data={typeParams} />
 						</Section>
 					) : null}
 					<Stack>{children}</Stack>
 				</Stack>
 			</Stack>
-			{kind === 'Class' && methods ? (
+			{(kind === 'Class' || kind === 'Interface') && (methods?.length || properties?.length) ? (
 				<MediaQuery smallerThan="md" styles={{ display: 'none' }}>
 					<Aside
 						sx={{ backgroundColor: 'transparent' }}
@@ -112,7 +119,7 @@ export function DocContainer({
 						withBorder={false}
 					>
 						<ScrollArea p="xs">
-							<TableOfContentsItems members={methods}></TableOfContentsItems>
+							<TableOfContentItems properties={properties ?? []} methods={methods ?? []}></TableOfContentItems>
 						</ScrollArea>
 					</Aside>
 				</MediaQuery>
