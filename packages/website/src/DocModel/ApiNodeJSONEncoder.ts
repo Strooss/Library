@@ -1,36 +1,36 @@
 import {
-	ApiModel,
+	type ApiModel,
 	ApiDeclaredItem,
-	ApiPropertyItem,
-	ApiMethod,
-	ApiParameterListMixin,
-	ApiTypeParameterListMixin,
-	ApiClass,
-	ApiFunction,
+	type ApiPropertyItem,
+	type ApiMethod,
+	type ApiParameterListMixin,
+	type ApiTypeParameterListMixin,
+	type ApiClass,
+	type ApiFunction,
 	ApiItemKind,
-	ApiTypeAlias,
-	ApiEnum,
-	ApiInterface,
-	ApiMethodSignature,
-	ApiPropertySignature,
-	ApiVariable,
-	ApiItem,
-	ApiConstructor,
-	ApiItemContainerMixin,
+	type ApiTypeAlias,
+	type ApiEnum,
+	type ApiInterface,
+	type ApiMethodSignature,
+	type ApiPropertySignature,
+	type ApiVariable,
+	type ApiItem,
+	type ApiConstructor,
+	type ApiItemContainerMixin,
 } from '@microsoft/api-extractor-model';
 import { generateTypeParamData } from './TypeParameterMixin';
 import { Visibility } from './Visibility';
 import { createCommentNode } from './comment';
 import type { DocBlockJSON } from './comment/CommentBlock';
 import type { AnyDocNodeJSON } from './comment/CommentNode';
-import { DocNodeContainerJSON, nodeContainer } from './comment/CommentNodeContainer';
+import { type DocNodeContainerJSON, nodeContainer } from './comment/CommentNodeContainer';
 import {
 	generatePath,
 	genParameter,
 	genReference,
 	genToken,
 	resolveName,
-	TokenDocumentation,
+	type TokenDocumentation,
 } from '~/util/parse.server';
 
 export interface ReferenceData {
@@ -152,7 +152,8 @@ export interface ApiConstructorJSON extends ApiItemJSON, ApiParameterListJSON {
 export class ApiNodeJSONEncoder {
 	public static encode(model: ApiModel, node: ApiItem, version: string) {
 		if (!(node instanceof ApiDeclaredItem)) {
-			throw new Error(`Cannot serialize node of type ${node.kind}`);
+			console.log(`Cannot serialize node of type ${node.kind}`);
+			return undefined;
 		}
 
 		switch (node.kind) {
@@ -169,7 +170,8 @@ export class ApiNodeJSONEncoder {
 			case ApiItemKind.Variable:
 				return this.encodeVariable(model, node as ApiVariable, version);
 			default:
-				throw new Error(`Unknown API item kind: ${node.kind}`);
+				console.log(`Unknown API item kind: ${node.kind}`);
+				return undefined;
 		}
 	}
 
@@ -221,7 +223,7 @@ export class ApiNodeJSONEncoder {
 		model: ApiModel,
 		item: ApiTypeParameterListMixin & ApiDeclaredItem,
 		version: string,
-	) {
+	): ApiTypeParameterListJSON {
 		return {
 			typeParameters: item.typeParameters.map((param) => generateTypeParamData(model, param, version, item.parent)),
 		};
@@ -259,7 +261,7 @@ export class ApiNodeJSONEncoder {
 		};
 	}
 
-	public static encodeFunction(model: ApiModel, item: ApiFunction, version: string) {
+	public static encodeFunction(model: ApiModel, item: ApiFunction, version: string): ApiFunctionJSON {
 		return {
 			...this.encodeItem(model, item, version),
 			...this.encodeParameterList(model, item, version),

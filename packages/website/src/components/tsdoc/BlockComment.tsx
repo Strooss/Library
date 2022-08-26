@@ -1,14 +1,9 @@
 import { Alert, Box, Title, Text } from '@mantine/core';
 import { StandardTags } from '@microsoft/tsdoc';
-import type { ReactNode } from 'react';
+import type { PropsWithChildren } from 'react';
 import { VscWarning } from 'react-icons/vsc';
 
-export interface BlockProps {
-	children: ReactNode;
-	title: string;
-}
-
-export function Block({ children, title }: BlockProps) {
+export function Block({ children, title }: PropsWithChildren<{ title: string }>) {
 	return (
 		<Box>
 			<Title order={5}>{title}</Title>
@@ -17,38 +12,37 @@ export function Block({ children, title }: BlockProps) {
 	);
 }
 
-export interface BlockCommentProps {
-	tagName: string;
-	children: ReactNode;
-	index?: number | undefined;
-}
-
-export interface ExampleBlockProps {
-	children: ReactNode;
-	exampleIndex?: number | undefined;
-}
-
-export function ExampleBlock({ children, exampleIndex }: ExampleBlockProps): JSX.Element {
+export function ExampleBlock({
+	children,
+	exampleIndex,
+}: PropsWithChildren<{ exampleIndex?: number | undefined }>): JSX.Element {
 	return <Block title={`Example ${exampleIndex ? exampleIndex : ''}`}>{children}</Block>;
 }
 
-export function DeprecatedBlock({ children }: { children: ReactNode }): JSX.Element {
+export function DeprecatedBlock({ children }: PropsWithChildren): JSX.Element {
 	return (
-		<Alert icon={<VscWarning />} title="Deprecated" variant="filled" color="red" radius="xs">
+		<Alert icon={<VscWarning />} title="Deprecated" variant="outline" color="red" radius="sm">
 			{children}
 		</Alert>
 	);
 }
 
-export function DefaultValueBlock({ children }: { children: ReactNode }): JSX.Element {
+export function DefaultValueBlock({ children }: PropsWithChildren): JSX.Element {
 	return <Block title="Default value">{children}</Block>;
 }
 
-export function RemarksBlock({ children }: { children: ReactNode }): JSX.Element {
+export function RemarksBlock({ children }: PropsWithChildren): JSX.Element {
 	return <Block title="Remarks">{children}</Block>;
 }
 
-export function BlockComment({ children, tagName, index }: BlockCommentProps): JSX.Element {
+export function BlockComment({
+	children,
+	tagName,
+	index,
+}: PropsWithChildren<{
+	tagName: string;
+	index?: number | undefined;
+}>): JSX.Element {
 	switch (tagName.toUpperCase()) {
 		case StandardTags.example.tagNameWithUpperCase:
 			return <ExampleBlock exampleIndex={index}>{children}</ExampleBlock>;

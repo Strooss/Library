@@ -1,9 +1,30 @@
-import { Group, Stack, Title, Text, Box, MediaQuery, Aside, ScrollArea } from '@mantine/core';
+import {
+	Group,
+	Stack,
+	Title,
+	Text,
+	Box,
+	MediaQuery,
+	Aside,
+	ScrollArea,
+	Skeleton,
+	Divider,
+	useMantineColorScheme,
+} from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { Fragment, ReactNode } from 'react';
-import { VscListSelection, VscSymbolParameter } from 'react-icons/vsc';
+import { useRouter } from 'next/router';
+import { Fragment, type PropsWithChildren } from 'react';
+import {
+	VscSymbolClass,
+	VscSymbolMethod,
+	VscSymbolEnum,
+	VscSymbolInterface,
+	VscSymbolVariable,
+	VscListSelection,
+	VscSymbolParameter,
+} from 'react-icons/vsc';
 import { PrismAsyncLight as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
+import { vscDarkPlus, ghcolors } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import { HyperlinkedText } from './HyperlinkedText';
 import { Section } from './Section';
 import { TableOfContentItems } from './TableOfContentItems';
@@ -12,21 +33,32 @@ import { TSDoc } from './tsdoc/TSDoc';
 import type { ApiClassJSON, ApiInterfaceJSON, ApiItemJSON } from '~/DocModel/ApiNodeJSONEncoder';
 import type { TypeParameterData } from '~/DocModel/TypeParameterMixin';
 import type { AnyDocNodeJSON } from '~/DocModel/comment/CommentNode';
-import { generateIcon } from '~/util/icon';
 import type { TokenDocumentation } from '~/util/parse.server';
 
-export interface DocContainerProps {
+type DocContainerProps = PropsWithChildren<{
 	name: string;
 	kind: string;
 	excerpt: string;
 	summary?: ApiItemJSON['summary'];
-	children?: ReactNode;
 	extendsTokens?: TokenDocumentation[] | null;
 	implementsTokens?: TokenDocumentation[][];
 	typeParams?: TypeParameterData[];
 	comment?: AnyDocNodeJSON | null;
 	methods?: ApiClassJSON['methods'] | ApiInterfaceJSON['methods'] | null;
 	properties?: ApiClassJSON['properties'] | ApiInterfaceJSON['properties'] | null;
+}>;
+
+function generateIcon(kind: string) {
+	const icons = {
+		Class: <VscSymbolClass />,
+		Method: <VscSymbolMethod />,
+		Function: <VscSymbolMethod />,
+		Enum: <VscSymbolEnum />,
+		Interface: <VscSymbolInterface />,
+		TypeAlias: <VscSymbolVariable />,
+	};
+
+	return icons[kind as keyof typeof icons];
 }
 
 export function DocContainer({
@@ -41,35 +73,44 @@ export function DocContainer({
 	methods,
 	properties,
 }: DocContainerProps) {
-	const matches = useMediaQuery('(max-width: 768px)', true, { getInitialValueInEffect: false });
+	const router = useRouter();
+	const matches = useMediaQuery('(max-width: 768px)');
+	const { colorScheme } = useMantineColorScheme();
 
 	return (
 		<Group>
 			<Stack sx={{ flexGrow: 1, maxWidth: '100%' }}>
-				<Title sx={{ wordBreak: 'break-all' }} order={2} ml="xs">
-					<Group>
-						{generateIcon(kind)}
-						{name}
-					</Group>
-				</Title>
+				<Skeleton visible={router.isFallback} radius="sm">
+					<Title sx={{ wordBreak: 'break-all' }} order={2} ml="xs">
+						<Group>
+							{generateIcon(kind)}
+							{name}
+						</Group>
+					</Title>
+				</Skeleton>
 
-				<Section title="Summary" icon={<VscListSelection size={20} />} padded dense={matches}>
-					{summary ? <TSDoc node={summary} /> : <Text>No summary provided.</Text>}
-				</Section>
+				<Skeleton visible={router.isFallback} radius="sm">
+					<Section title="Summary" icon={<VscListSelection size={20} />} padded dense={matches}>
+						{summary ? <TSDoc node={summary} /> : <Text>No summary provided.</Text>}
+						<Divider size="md" mt={20} />
+					</Section>
+				</Skeleton>
 
-				<Box px="xs" pb="xs">
-					<SyntaxHighlighter
-						wrapLongLines
-						language="typescript"
-						style={vscDarkPlus}
-						codeTagProps={{ style: { fontFamily: 'JetBrains Mono' } }}
-					>
-						{excerpt}
-					</SyntaxHighlighter>
-				</Box>
+				<Skeleton visible={router.isFallback} radius="sm">
+					<Box pb="xs">
+						<SyntaxHighlighter
+							wrapLongLines
+							language="typescript"
+							style={colorScheme === 'dark' ? vscDarkPlus : ghcolors}
+							codeTagProps={{ style: { fontFamily: 'JetBrains Mono' } }}
+						>
+							{excerpt}
+						</SyntaxHighlighter>
+					</Box>
+				</Skeleton>
 
 				{extendsTokens?.length ? (
-					<Group noWrap>
+					<Group pb="xs" noWrap>
 						<Title order={3} ml="xs">
 							Extends
 						</Title>
@@ -80,7 +121,7 @@ export function DocContainer({
 				) : null}
 
 				{implementsTokens?.length ? (
-					<Group noWrap>
+					<Group pb="xs" noWrap>
 						<Title order={3} ml="xs">
 							Implements
 						</Title>
@@ -95,30 +136,27 @@ export function DocContainer({
 					</Group>
 				) : null}
 
-				<Stack>
-					{typeParams?.length ? (
-						<Section
-							title="Type Parameters"
-							icon={<VscSymbolParameter size={20} />}
-							padded
-							dense={matches}
-							defaultClosed
-						>
-							<TypeParamTable data={typeParams} />
-						</Section>
-					) : null}
-					<Stack>{children}</Stack>
-				</Stack>
+				<Skeleton visible={router.isFallback} radius="sm">
+					<Stack>
+						{typeParams?.length ? (
+							<Section
+								title="Type Parameters"
+								icon={<VscSymbolParameter size={20} />}
+								padded
+								dense={matches}
+								defaultClosed
+							>
+								<TypeParamTable data={typeParams} />
+							</Section>
+						) : null}
+						<Stack>{children}</Stack>
+					</Stack>
+				</Skeleton>
 			</Stack>
 			{(kind === 'Class' || kind === 'Interface') && (methods?.length || properties?.length) ? (
-				<MediaQuery smallerThan="md" styles={{ display: 'none' }}>
-					<Aside
-						sx={{ backgroundColor: 'transparent' }}
-						hiddenBreakpoint="md"
-						width={{ md: 200, lg: 300 }}
-						withBorder={false}
-					>
-						<ScrollArea p="xs">
+				<MediaQuery smallerThan="lg" styles={{ display: 'none' }}>
+					<Aside hiddenBreakpoint="lg" width={{ lg: 250 }} withBorder>
+						<ScrollArea p="sm" offsetScrollbars>
 							<TableOfContentItems properties={properties ?? []} methods={methods ?? []}></TableOfContentItems>
 						</ScrollArea>
 					</Aside>

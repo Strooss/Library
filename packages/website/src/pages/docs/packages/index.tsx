@@ -1,11 +1,29 @@
-import { Container, UnstyledButton, createStyles, Group, ThemeIcon, Text, Stack, Title } from '@mantine/core';
+import {
+	Container,
+	UnstyledButton,
+	createStyles,
+	Group,
+	ThemeIcon,
+	Text,
+	Stack,
+	Title,
+	useMantineColorScheme,
+} from '@mantine/core';
 import Link from 'next/link';
 import { VscArrowRight, VscPackage } from 'react-icons/vsc';
+import { PACKAGES } from '~/util/packages';
 
 const useStyles = createStyles((theme) => ({
+	outer: {
+		display: 'flex',
+		height: '100%',
+		alignItems: 'center',
+	},
+
 	control: {
 		padding: theme.spacing.xs,
 		color: theme.colorScheme === 'dark' ? theme.colors.dark![0] : theme.black,
+		borderRadius: theme.radius.xs,
 
 		'&:hover': {
 			backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark![6] : theme.colors.gray![0],
@@ -16,20 +34,20 @@ const useStyles = createStyles((theme) => ({
 
 export default function PackagesRoute() {
 	const { classes } = useStyles();
-	const packages = ['builders', 'collection', 'proxy', 'rest', 'voice', 'ws'];
+	const { colorScheme } = useMantineColorScheme();
 
 	return (
-		<Container pt={96} size="xs">
+		<Container className={classes.outer} size="xs">
 			<Stack sx={{ flexGrow: 1 }}>
 				<Title order={2} ml="xs">
 					Select a package:
 				</Title>
-				{packages.map((pkg) => (
-					<Link key={pkg} href={`/docs/packages/${pkg}`} passHref>
+				{PACKAGES.map((pkg) => (
+					<Link key={pkg} href={`/docs/packages/${pkg}`} passHref prefetch={false}>
 						<UnstyledButton className={classes.control} component="a">
 							<Group position="apart">
 								<Group>
-									<ThemeIcon size={30}>
+									<ThemeIcon variant={colorScheme === 'dark' ? 'filled' : 'outline'} radius="sm" size={30}>
 										<VscPackage size={20} />
 									</ThemeIcon>
 									<Text weight={600} size="md">

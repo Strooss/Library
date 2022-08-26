@@ -1,14 +1,26 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { Box } from '@mantine/core';
-import { ApiFunction, ApiPackage } from '@microsoft/api-extractor-model';
+import { cwd } from 'node:process';
+import { ActionIcon, Affix, Box, LoadingOverlay, Transition } from '@mantine/core';
+import { useMediaQuery, useWindowScroll } from '@mantine/hooks';
+import { ApiFunction, ApiItemKind, type ApiPackage } from '@microsoft/api-extractor-model';
+import { MDXRemote } from 'next-mdx-remote';
+import { serialize } from 'next-mdx-remote/serialize';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import type { GetStaticPaths, GetStaticProps } from 'next/types';
+import { VscChevronUp } from 'react-icons/vsc';
+import rehypeIgnore from 'rehype-ignore';
+import rehypePrettyCode from 'rehype-pretty-code';
+import rehypeRaw from 'rehype-raw';
+import rehypeSlug from 'rehype-slug';
+import remarkGfm from 'remark-gfm';
 import type {
 	ApiClassJSON,
 	ApiEnumJSON,
 	ApiFunctionJSON,
 	ApiInterfaceJSON,
+	ApiItemJSON,
 	ApiTypeAliasJSON,
 	ApiVariableJSON,
 } from '~/DocModel/ApiNodeJSONEncoder';
@@ -22,22 +34,18 @@ import { Variable } from '~/components/model/Variable';
 import { MemberProvider } from '~/contexts/member';
 import { createApiModel } from '~/util/api-model.server';
 import { findMember, findMemberByKey } from '~/util/model.server';
+import { PACKAGES } from '~/util/packages';
 import { findPackage, getMembers } from '~/util/parse.server';
 
 export const getStaticPaths: GetStaticPaths = async () => {
-	const packages = ['builders', 'collection', 'proxy', 'rest', 'voice', 'ws'];
-
 	const pkgs = (
 		await Promise.all(
-			packages.map(async (packageName) => {
+			PACKAGES.map(async (packageName) => {
 				try {
 					let data: any[] = [];
 					let versions: string[] = [];
 					if (process.env.NEXT_PUBLIC_LOCAL_DEV) {
-						const res = await readFile(
-							join(__dirname, '..', '..', '..', '..', '..', packageName, 'docs', 'docs.api.json'),
-							'utf-8',
-						);
+						const res = await readFile(join(cwd(), '..', packageName, 'docs', 'docs.api.json'), 'utf-8');
 						// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 						data = JSON.parse(res);
 					} else {
@@ -57,25 +65,29 @@ export const getStaticPaths: GetStaticPaths = async () => {
 						const pkgs = models.map((model) => findPackage(model, packageName)) as ApiPackage[];
 
 						return [
-							{ params: { slug: ['packages', packageName, 'main'] } },
 							...versions.map((version) => ({ params: { slug: ['packages', packageName, version] } })),
 							...pkgs
 								.map((pkg, idx) =>
-									getMembers(pkg)
-										// Filtering out enum `RESTEvents` because of interface with similar name `RestEvents`
-										// causing next.js export to error
-										.filter((member) => member.name !== 'RESTEvents')
-										.map((member) => {
-											if (member.kind === 'Function' && member.overloadIndex && member.overloadIndex > 1) {
-												return {
-													params: {
-														slug: ['packages', packageName, versions[idx]!, `${member.name}:${member.overloadIndex}`],
-													},
-												};
-											}
+									getMembers(pkg, versions[idx]!).map((member) => {
+										if (member.kind === ApiItemKind.Function && member.overloadIndex && member.overloadIndex > 1) {
+											return {
+												params: {
+													slug: [
+														'packages',
+														packageName,
+														versions[idx]!,
+														`${member.name}:${member.overloadIndex}:${member.kind}`,
+													],
+												},
+											};
+										}
 
-											return { params: { slug: ['packages', packageName, versions[idx]!, member.name] } };
-										}),
+										return {
+											params: {
+												slug: ['packages', packageName, versions[idx]!, `${member.name}:${member.kind}`],
+											},
+										};
+									}),
 								)
 								.flat(),
 						];
@@ -86,21 +98,17 @@ export const getStaticPaths: GetStaticPaths = async () => {
 
 					return [
 						{ params: { slug: ['packages', packageName, 'main'] } },
-						...getMembers(pkg!)
-							// Filtering out enum `RESTEvents` because of interface with similar name `RestEvents`
-							// causing next.js export to error
-							.filter((member) => member.name !== 'RESTEvents')
-							.map((member) => {
-								if (member.kind === 'Function' && member.overloadIndex && member.overloadIndex > 1) {
-									return {
-										params: {
-											slug: ['packages', packageName, 'main', `${member.name}:${member.overloadIndex}`],
-										},
-									};
-								}
+						...getMembers(pkg!, 'main').map((member) => {
+							if (member.kind === ApiItemKind.Function && member.overloadIndex && member.overloadIndex > 1) {
+								return {
+									params: {
+										slug: ['packages', packageName, 'main', `${member.name}:${member.overloadIndex}:${member.kind}`],
+									},
+								};
+							}
 
-								return { params: { slug: ['packages', packageName, 'main', member.name] } };
-							}),
+							return { params: { slug: ['packages', packageName, 'main', `${member.name}:${member.kind}`] } };
+						}),
 					];
 				} catch {
 					return { params: { slug: [] } };
@@ -116,17 +124,25 @@ export const getStaticPaths: GetStaticPaths = async () => {
 };
 
 export const getStaticProps: GetStaticProps = async ({ params }) => {
-	const [, packageName = 'builders', branchName = 'main', member = 'ActionRowBuilder'] = params!.slug as string[];
+	const [, packageName = 'builders', branchName = 'main', member] = params!.slug as string[];
 
-	const [memberName, overloadIndex] = member.split(':') as [string, string | undefined];
+	const [memberName, overloadIndex] = member?.split(':') ?? [];
 
 	try {
+		const readme = await readFile(join(cwd(), '..', packageName, 'README.md'), 'utf-8');
+
+		const mdxSource = await serialize(readme, {
+			mdxOptions: {
+				remarkPlugins: [remarkGfm],
+				remarkRehypeOptions: { allowDangerousHtml: true },
+				rehypePlugins: [rehypeRaw, rehypeIgnore, rehypeSlug, [rehypePrettyCode, { theme: 'dark-plus' }]],
+				format: 'md',
+			},
+		});
+
 		let data;
 		if (process.env.NEXT_PUBLIC_LOCAL_DEV) {
-			const res = await readFile(
-				join(__dirname, '..', '..', '..', '..', '..', packageName, 'docs', 'docs.api.json'),
-				'utf-8',
-			);
+			const res = await readFile(join(cwd(), '..', packageName, 'docs', 'docs.api.json'), 'utf-8');
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 			data = JSON.parse(res);
 		} else {
@@ -139,32 +155,38 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
 		const pkg = findPackage(model, packageName);
 
 		let { containerKey, name } = findMember(model, packageName, memberName, branchName) ?? {};
-		if (name && overloadIndex) {
+		if (name && overloadIndex && !Number.isNaN(parseInt(overloadIndex, 10))) {
 			containerKey = ApiFunction.getContainerKey(name, parseInt(overloadIndex, 10));
 		}
 
 		return {
 			props: {
 				packageName,
+				branchName,
 				data: {
 					members: pkg ? getMembers(pkg, branchName) : [],
 					member:
 						memberName && containerKey ? findMemberByKey(model, packageName, containerKey, branchName) ?? null : null,
+					source: mdxSource,
 				},
 			},
+			revalidate: 3600,
 		};
-	} catch {
+	} catch (e) {
+		const error = e as Error;
+		console.error(error);
+
 		return {
 			props: {
-				error: 'FetchError',
+				error: e,
 			},
+			revalidate: 3600,
 		};
 	}
 };
 
-const member = (props: any) => {
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-	switch (props.kind) {
+const member = (props?: ApiItemJSON | undefined) => {
+	switch (props?.kind) {
 		case 'Class':
 			return <Class data={props as ApiClassJSON} />;
 		case 'Function':
@@ -182,7 +204,24 @@ const member = (props: any) => {
 	}
 };
 
-export default function Slug(props: Partial<SidebarLayoutProps & { error?: string }>) {
+export default function SlugPage(props: Partial<SidebarLayoutProps & { error?: string }>) {
+	const router = useRouter();
+	const [scroll, scrollTo] = useWindowScroll();
+	const matches = useMediaQuery('(max-width: 1200px)');
+
+	const name = `discord.js${props.data?.member?.name ? ` | ${props.data.member.name}` : ''}`;
+
+	if (router.isFallback) {
+		return (
+			<SidebarLayout>
+				<LoadingOverlay visible overlayBlur={2} />
+			</SidebarLayout>
+		);
+	}
+
+	// Just in case
+	// return <iframe src="https://discord.js.org" style={{ border: 0, height: '100%', width: '100%' }}></iframe>;
+
 	return props.error ? (
 		<Box sx={{ display: 'flex', maxWidth: '100%', height: '100%' }}>{props.error}</Box>
 	) : (
@@ -191,11 +230,50 @@ export default function Slug(props: Partial<SidebarLayoutProps & { error?: strin
 				{props.data?.member ? (
 					<>
 						<Head>
-							<title key="title">discord.js | {props.data.member.name}</title>
+							<title key="title">{name}</title>
 						</Head>
 						{member(props.data.member)}
 					</>
+				) : props.data?.source ? (
+					<Box
+						sx={(theme) => ({
+							a: {
+								backgroundColor: 'transparent',
+								color: theme.colors.blurple![0],
+								textDecoration: 'none',
+							},
+							img: {
+								borderStyle: 'none',
+								maxWidth: '100%',
+								boxSizing: 'content-box',
+							},
+						})}
+						px="xl"
+					>
+						<MDXRemote {...props.data.source} />
+					</Box>
 				) : null}
+				<Affix
+					position={{
+						bottom: 20,
+						right:
+							matches || (props.data?.member?.kind !== 'Class' && props.data?.member?.kind !== 'Interface') ? 20 : 268,
+					}}
+				>
+					<Transition transition="slide-up" mounted={scroll.y > 200}>
+						{(transitionStyles) => (
+							<ActionIcon
+								variant="filled"
+								color="blurple"
+								size={30}
+								style={transitionStyles}
+								onClick={() => scrollTo({ y: 0 })}
+							>
+								<VscChevronUp size={20} />
+							</ActionIcon>
+						)}
+					</Transition>
+				</Affix>
 			</SidebarLayout>
 		</MemberProvider>
 	);

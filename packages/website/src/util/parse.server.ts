@@ -10,10 +10,10 @@ import {
 	type ApiPropertyItem,
 	type ExcerptToken,
 	type Parameter,
-	ApiFunction,
+	type ApiFunction,
 } from '@microsoft/api-extractor-model';
 import type { DocNode, DocParagraph, DocPlainText } from '@microsoft/tsdoc';
-import { Meaning, ModuleSource } from '@microsoft/tsdoc/lib-commonjs/beta/DeclarationReference';
+import { type Meaning, ModuleSource } from '@microsoft/tsdoc/lib-commonjs/beta/DeclarationReference';
 import { createCommentNode } from '~/DocModel/comment';
 import type { DocBlockJSON } from '~/DocModel/comment/CommentBlock';
 
@@ -25,6 +25,7 @@ export function findPackage(model: ApiModel, name: string): ApiPackage | undefin
 
 export function generatePath(items: readonly ApiItem[], version: string) {
 	let path = '/docs/packages';
+
 	for (const item of items) {
 		switch (item.kind) {
 			case ApiItemKind.Model:
@@ -39,17 +40,17 @@ export function generatePath(items: readonly ApiItem[], version: string) {
 				const functionItem = item as ApiFunction;
 				path += `/${functionItem.displayName}${
 					functionItem.overloadIndex && functionItem.overloadIndex > 1 ? `:${functionItem.overloadIndex}` : ''
-				}`;
+				}:${item.kind}`;
 				break;
 			case ApiItemKind.Property:
 			case ApiItemKind.Method:
 			case ApiItemKind.MethodSignature:
 			case ApiItemKind.PropertySignature:
 				// TODO: Take overloads into account
-				path += `#${item.displayName}`;
+				path += `#${item.displayName}:${item.kind}`;
 				break;
 			default:
-				path += `/${item.displayName}`;
+				path += `/${item.displayName}:${item.kind}`;
 		}
 	}
 
@@ -212,7 +213,7 @@ export function genParameter(model: ApiModel, param: Parameter, version: string)
 	};
 }
 
-export function getMembers(pkg: ApiPackage, version = 'main') {
+export function getMembers(pkg: ApiPackage, version: string) {
 	return pkg.members[0]!.members.map((member) => ({
 		name: member.displayName,
 		kind: member.kind as string,

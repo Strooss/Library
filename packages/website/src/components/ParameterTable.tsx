@@ -4,6 +4,11 @@ import { Table } from './Table';
 import { TSDoc } from './tsdoc/TSDoc';
 import type { ParameterDocumentation } from '~/util/parse.server';
 
+const columnStyles = {
+	Name: 'font-mono whitespace-nowrap',
+	Type: 'font-mono whitespace-pre-wrap break-normal',
+};
+
 export function ParameterTable({ data }: { data: ParameterDocumentation[] }) {
 	const rows = data.map((param) => ({
 		Name: param.name,
@@ -12,14 +17,9 @@ export function ParameterTable({ data }: { data: ParameterDocumentation[] }) {
 		Description: param.paramCommentBlock ? <TSDoc node={param.paramCommentBlock} /> : 'None',
 	}));
 
-	const columnStyles = {
-		Name: 'font-mono whitespace-nowrap',
-		Type: 'font-mono whitespace-pre-wrap break-normal',
-	};
-
 	return (
 		<Box>
-			<ScrollArea type="auto">
+			<ScrollArea pb="xs" offsetScrollbars>
 				<Table columns={['Name', 'Type', 'Optional', 'Description']} rows={rows} columnStyles={columnStyles} />
 			</ScrollArea>
 		</Box>

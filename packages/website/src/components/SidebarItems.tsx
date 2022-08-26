@@ -1,6 +1,7 @@
-import { createStyles, UnstyledButton, Group, Text } from '@mantine/core';
+import { createStyles, Group, Text, NavLink, Box } from '@mantine/core';
 import Link from 'next/link';
-import type { Dispatch, SetStateAction } from 'react';
+import { useRouter } from 'next/router';
+import { type Dispatch, type SetStateAction, useEffect, useState, useMemo } from 'react';
 import {
 	VscSymbolClass,
 	VscSymbolEnum,
@@ -66,15 +67,24 @@ function resolveIcon(item: keyof GroupedMembers) {
 }
 
 const useStyles = createStyles((theme) => ({
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 	link: {
+		...theme.fn.focusStyles(),
 		fontWeight: 500,
 		display: 'block',
+		width: 'unset',
 		padding: 5,
 		paddingLeft: 31,
 		marginLeft: 25,
 		fontSize: theme.fontSizes.sm,
 		color: theme.colorScheme === 'dark' ? theme.colors.dark![0] : theme.colors.gray![7],
 		borderLeft: `1px solid ${theme.colorScheme === 'dark' ? theme.colors.dark![4] : theme.colors.gray![3]}`,
+
+		'&[data-active]': {
+			'&:hover': {
+				color: theme.white,
+			},
+		},
 
 		'&:hover': {
 			backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark![6] : theme.colors.gray![0],
@@ -90,33 +100,46 @@ export function SidebarItems({
 	members: Members;
 	setOpened: Dispatch<SetStateAction<boolean>>;
 }) {
+	const router = useRouter();
+	const [asPathWithoutQueryAndAnchor, setAsPathWithoutQueryAndAnchor] = useState('');
 	const { classes } = useStyles();
-	const groupItems = groupMembers(members);
+	const groupItems = useMemo(() => groupMembers(members), [members]);
+
+	useEffect(() => {
+		setAsPathWithoutQueryAndAnchor(router.asPath.split('?')[0]?.split('#')[0] ?? '');
+	}, [router.asPath]);
 
 	return (
-		<>
+		<Box sx={(theme) => ({ paddingBottom: 48, [theme.fn.smallerThan('md')]: { paddingBottom: 128 } })}>
 			{(Object.keys(groupItems) as (keyof GroupedMembers)[])
 				.filter((group) => groupItems[group].length)
 				.map((group, idx) => (
 					<Section key={idx} title={group} icon={resolveIcon(group)}>
 						{groupItems[group].map((member, i) => (
-							<Link key={i} href={member.path} passHref>
-								<UnstyledButton className={classes.link} component="a" onClick={() => setOpened((o) => !o)}>
-									<Group>
-										<Text sx={{ textOverflow: 'ellipsis', overflow: 'hidden' }} className="line-clamp-1">
-											{member.name}
-										</Text>
-										{member.overloadIndex && member.overloadIndex > 1 ? (
-											<Text size="xs" color="dimmed">
-												{member.overloadIndex}
+							<Link key={i} href={member.path} passHref prefetch={false}>
+								<NavLink
+									className={classes.link}
+									component="a"
+									onClick={() => setOpened((o) => !o)}
+									label={
+										<Group>
+											<Text sx={{ textOverflow: 'ellipsis', overflow: 'hidden' }} className="line-clamp-1">
+												{member.name}
 											</Text>
-										) : null}
-									</Group>
-								</UnstyledButton>
+											{member.overloadIndex && member.overloadIndex > 1 ? (
+												<Text size="xs" color="dimmed">
+													{member.overloadIndex}
+												</Text>
+											) : null}
+										</Group>
+									}
+									active={asPathWithoutQueryAndAnchor === member.path}
+									variant="filled"
+								></NavLink>
 							</Link>
 						))}
 					</Section>
 				))}
-		</>
+		</Box>
 	);
 }

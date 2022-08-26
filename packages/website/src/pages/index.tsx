@@ -1,15 +1,28 @@
-import { createStyles, Container, Title, Button, Group, Text, Center } from '@mantine/core';
+import { createStyles, Container, Title, Button, Group, Text, Center, Box, useMantineColorScheme } from '@mantine/core';
 import Image from 'next/future/image';
 import Link from 'next/link';
-import codeSample from '../assets/code-sample.png';
+import { FiExternalLink } from 'react-icons/fi';
+import { PrismAsyncLight as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus, ghcolors } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 const useStyles = createStyles((theme) => ({
+	outer: {
+		display: 'flex',
+		flexDirection: 'column',
+		height: '100%',
+		justifyContent: 'center',
+		gap: 50,
+		padding: 32,
+
+		[theme.fn.smallerThan('md')]: {
+			height: 'unset',
+		},
+	},
+
 	inner: {
 		display: 'flex',
 		justifyContent: 'space-between',
 		alignItems: 'center',
-		paddingTop: theme.spacing.xl * 4,
-		paddingBottom: theme.spacing.xl * 4,
 
 		[theme.fn.smallerThan('md')]: {
 			flexDirection: 'column',
@@ -19,7 +32,7 @@ const useStyles = createStyles((theme) => ({
 
 	content: {
 		maxWidth: 480,
-		marginRight: theme.spacing.xl * 3,
+		marginRight: theme.spacing.xl,
 
 		[theme.fn.smallerThan('md')]: {
 			marginRight: 0,
@@ -43,74 +56,78 @@ const useStyles = createStyles((theme) => ({
 		borderRadius: theme.radius.sm,
 		padding: '4px 12px',
 	},
-
-	control: {
-		[theme.fn.smallerThan('xs')]: {
-			flex: 1,
-		},
-	},
-
-	image: {
-		flex: 1,
-		height: '100%',
-		maxWidth: 550,
-
-		[theme.fn.smallerThan('xs')]: {
-			maxWidth: 350,
-		},
-	},
-
-	vercel: {
-		paddingBottom: theme.spacing.xl * 4,
-	},
 }));
 
 export default function IndexRoute() {
 	const { classes } = useStyles();
-	return (
-		<div>
-			<Container size="lg">
-				<div className={classes.inner}>
-					<div className={classes.content}>
-						<Title className={classes.title}>
-							The <span className={classes.highlight}>most popular</span> way to build Discord <br /> bots.
-						</Title>
-						<Text color="dimmed" mt="md">
-							discord.js is a powerful Node.js module that allows you to interact with the Discord API very easily. It
-							takes a much more object-oriented approach than most other JS Discord libraries, making your bot&apos;s
-							code significantly tidier and easier to comprehend.
-						</Text>
+	const { colorScheme } = useMantineColorScheme();
 
-						<Group mt={30}>
-							<Link href="/docs" passHref>
-								<Button component="a" radius="xl" size="md" className={classes.control}>
-									Docs
-								</Button>
-							</Link>
-							<Link href="https://discordjs.guide" passHref>
-								<Button component="a" variant="default" radius="xl" size="md" className={classes.control}>
-									Guide
-								</Button>
-							</Link>
-						</Group>
-					</div>
-					<Image src={codeSample} className={classes.image} />
-				</div>
-				<Center>
-					<Link href="https://vercel.com/?utm_source=discordjs&utm_campaign=oss" passHref>
-						<a title="Vercel">
-							<Image
-								src="/powered-by-vercel.svg"
-								alt="Vercel"
-								width={0}
-								height={0}
-								style={{ height: '100%', width: '100%', maxWidth: 250 }}
-								className={classes.vercel}
-							/>
-						</a>
-					</Link>
-				</Center>
-			</Container>
-		</div>
+	return (
+		<Container className={classes.outer} size="lg">
+			<Box className={classes.inner}>
+				<Box className={classes.content}>
+					<Title className={classes.title}>
+						The <span className={classes.highlight}>most popular</span> way to build Discord <br /> bots.
+					</Title>
+					<Text color="dimmed" mt="md">
+						discord.js is a powerful Node.js module that allows you to interact with the Discord API very easily. It
+						takes a much more object-oriented approach than most other JS Discord libraries, making your bot&apos;s code
+						significantly tidier and easier to comprehend.
+					</Text>
+
+					<Group mt={30}>
+						<Link href="/docs" passHref prefetch={false}>
+							<Button component="a" radius="sm" size="md">
+								Docs
+							</Button>
+						</Link>
+						<Link href="https://discordjs.guide" passHref prefetch={false}>
+							<Button component="a" variant="default" radius="sm" size="md" rightIcon={<FiExternalLink />}>
+								Guide
+							</Button>
+						</Link>
+					</Group>
+				</Box>
+				<Box pb="xs">
+					<SyntaxHighlighter
+						wrapLongLines
+						language="typescript"
+						style={colorScheme === 'dark' ? vscDarkPlus : ghcolors}
+						codeTagProps={{ style: { fontFamily: 'JetBrains Mono' } }}
+					>
+						{`import { Client, GatewayIntentBits } from 'discord.js';
+
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+
+client.on('ready', () => {
+	console.log(\`Logged in as \${client.user.tag}!\`);
+});
+
+client.on('interactionCreate', async (interaction) => {
+	if (!interaction.isChatInputCommand()) return;
+
+	if (interaction.commandName === 'ping') {
+		await interaction.reply('Pong!');
+	}
+});
+
+await client.login('token');`}
+					</SyntaxHighlighter>
+				</Box>
+			</Box>
+			<Center>
+				<Link href="https://vercel.com/?utm_source=discordjs&utm_campaign=oss" prefetch={false}>
+					<a title="Vercel">
+						<Image
+							src="/powered-by-vercel.svg"
+							alt="Vercel"
+							width={0}
+							height={0}
+							style={{ height: '100%', width: '100%', maxWidth: 250 }}
+						/>
+					</a>
+				</Link>
+			</Center>
+		</Container>
 	);
 }
