@@ -1,7 +1,7 @@
 {
-	"name": "@discordjs/scripts",
-	"version": "0.1.0",
-	"description": "A set of scripts that we use for our workflows",
+	"name": "@discordjs/api-extractor-utils",
+	"version": "1.0.0",
+	"description": "Utilities for api-extractor",
 	"private": true,
 	"scripts": {
 		"build": "unbuild",
@@ -9,14 +9,8 @@
 		"format": "prettier --write . && TIMING=1 eslint src --ext mjs,js,ts --fix",
 		"fmt": "yarn format"
 	},
-	"main": "./dist/index.cjs",
-	"module": "./dist/index.mjs",
+	"main": "./dist/index.mjs",
 	"types": "./dist/index.d.ts",
-	"exports": {
-		"import": "./dist/index.mjs",
-		"require": "./dist/index.cjs",
-		"types": "./dist/index.d.ts"
-	},
 	"directories": {
 		"lib": "src"
 	},
@@ -24,48 +18,40 @@
 		"dist"
 	],
 	"contributors": [
-		"Crawl <icrawltogo@gmail.com>"
+		"Suneet Tipirneni <suneettipirneni@icloud.com>"
 	],
 	"license": "Apache-2.0",
-	"keywords": [
-		"api",
-		"bot",
-		"client",
-		"node",
-		"discordjs"
-	],
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/discordjs/discord.js.git"
+		"url": "git+https://github.com/discordjs/discord.js.git"
 	},
 	"bugs": {
 		"url": "https://github.com/discordjs/discord.js/issues"
 	},
 	"homepage": "https://discord.js.org",
 	"dependencies": {
-		"@discordjs/api-extractor-utils": "workspace:^",
 		"@microsoft/api-extractor-model": "^7.23.3",
-		"@microsoft/tsdoc": "^0.14.1",
-		"commander": "^9.4.0",
-		"tslib": "^2.4.0"
+		"@microsoft/tsdoc": "^0.14.1"
 	},
 	"devDependencies": {
 		"@types/node": "^16.11.56",
 		"@typescript-eslint/eslint-plugin": "^5.36.1",
 		"@typescript-eslint/parser": "^5.36.1",
-		"@vitest/coverage-c8": "^0.22.1",
 		"eslint": "^8.23.0",
 		"eslint-config-marine": "^9.4.1",
 		"eslint-config-prettier": "^8.5.0",
 		"eslint-import-resolver-typescript": "^3.5.0",
 		"eslint-plugin-import": "^2.26.0",
+		"eslint-plugin-tsdoc": "^0.2.16",
 		"prettier": "^2.7.1",
 		"rollup-plugin-typescript2": "^0.33.0",
 		"typescript": "^4.8.2",
-		"unbuild": "^0.8.9",
-		"vitest": "^0.22.1"
+		"unbuild": "^0.8.9"
 	},
 	"engines": {
 		"node": ">=16.9.0"
+	},
+	"publishConfig": {
+		"access": "public"
 	}
 }
