@@ -3,15 +3,14 @@
 	"version": "1.0.0",
 	"description": "Lightweight HTTP proxy for Discord's API, brought to you as a container 📦",
 	"scripts": {
-		"build": "unbuild",
-		"lint": "prettier --check . && TIMING=1 eslint src --ext mjs,js,ts",
-		"format": "prettier --write . && TIMING=1 eslint src --ext mjs,js,ts --fix",
+		"build": "tsup",
+		"lint": "prettier --check . && cross-env TIMING=1 eslint src --ext .mjs,.js,.ts --format=pretty",
+		"format": "prettier --write . && cross-env TIMING=1 eslint src --ext .mjs,.js,.ts --fix --format=pretty",
 		"fmt": "yarn format",
-		"prepack": "yarn lint && yarn test && yarn build",
-		"changelog": "git cliff --prepend ./CHANGELOG.md -u -c ./cliff.toml -r ../../ --include-path 'packages/proxy-container/*'"
+		"prepack": "yarn lint && yarn test && yarn build"
 	},
-	"main": "./dist/index.mjs",
 	"type": "module",
+	"module": "./dist/index.js",
 	"directories": {
 		"lib": "src"
 	},
@@ -23,7 +22,7 @@
 		"Amish Shah <amishshah.2k@gmail.com>",
 		"SpaceEEC <spaceeec@yahoo.com>",
 		"Vlad Frangu <kingdgrizzle@gmail.com>",
-		"Antonio Roman <kyradiscord@gmail.com>",
+		"Aura Román <kyradiscord@gmail.com>",
 		"DD <didinele.dev@gmail.com>"
 	],
 	"license": "Apache-2.0",
@@ -44,23 +43,19 @@
 	},
 	"homepage": "https://discord.js.org",
 	"dependencies": {
-		"@discordjs/proxy": "^1.1.0",
-		"@discordjs/rest": "^1.1.0",
+		"@discordjs/proxy": "^1.2.0",
+		"@discordjs/rest": "^1.3.0",
 		"tslib": "^2.4.0"
 	},
 	"devDependencies": {
-		"@types/node": "^16.11.56",
-		"@typescript-eslint/eslint-plugin": "^5.36.1",
-		"@typescript-eslint/parser": "^5.36.1",
-		"eslint": "^8.23.0",
-		"eslint-config-marine": "^9.4.1",
-		"eslint-config-prettier": "^8.5.0",
-		"eslint-import-resolver-typescript": "^3.5.0",
-		"eslint-plugin-import": "^2.26.0",
+		"@types/node": "16.11.64",
+		"cross-env": "^7.0.3",
+		"eslint": "^8.25.0",
+		"eslint-config-neon": "^0.1.38",
+		"eslint-formatter-pretty": "^4.1.0",
 		"prettier": "^2.7.1",
-		"rollup-plugin-typescript2": "^0.33.0",
-		"typescript": "^4.8.2",
-		"unbuild": "^0.8.9"
+		"tsup": "^6.2.3",
+		"typescript": "^4.8.4"
 	},
 	"engines": {
 		"node": ">=16.9.0"

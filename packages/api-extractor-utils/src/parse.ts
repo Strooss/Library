@@ -3,7 +3,6 @@ import {
 	type ApiPackage,
 	type ApiItem,
 	ApiItemKind,
-	ApiDocumentedItem,
 	type Excerpt,
 	ExcerptTokenKind,
 	ApiNameMixin,
@@ -11,11 +10,12 @@ import {
 	type ExcerptToken,
 	type Parameter,
 	type ApiFunction,
+	ApiDeclaredItem,
 } from '@microsoft/api-extractor-model';
 import type { DocNode, DocParagraph, DocPlainText } from '@microsoft/tsdoc';
 import { type Meaning, ModuleSource } from '@microsoft/tsdoc/lib-commonjs/beta/DeclarationReference';
-import { createCommentNode } from './tsdoc';
-import type { DocBlockJSON } from './tsdoc/CommentBlock';
+import type { DocBlockJSON } from './tsdoc/CommentBlock.js';
+import { createCommentNode } from './tsdoc/index.js';
 
 export function findPackage(model: ApiModel, name: string): ApiPackage | undefined {
 	return (model.findMembersByName(name)[0] ?? model.findMembersByName(`@discordjs/${name}`)[0]) as
@@ -47,18 +47,19 @@ export function generatePath(items: readonly ApiItem[], version: string) {
 			case ApiItemKind.MethodSignature:
 			case ApiItemKind.PropertySignature:
 				// TODO: Take overloads into account
-				path += `#${item.displayName}:${item.kind}`;
+				path += `#${item.displayName}`;
 				break;
 			default:
 				path += `/${item.displayName}:${item.kind}`;
 		}
 	}
 
+	// eslint-disable-next-line prefer-named-capture-group, unicorn/no-unsafe-regex
 	return path.replace(/@discordjs\/(.*)\/(.*)?/, `$1/${version}/$2`);
 }
 
-export function resolveDocComment(item: ApiDocumentedItem) {
-	if (!(item instanceof ApiDocumentedItem)) {
+export function resolveDocComment(item: ApiDeclaredItem) {
+	if (!(item instanceof ApiDeclaredItem)) {
 		return null;
 	}
 
@@ -70,26 +71,22 @@ export function resolveDocComment(item: ApiDocumentedItem) {
 
 	const { summarySection } = tsdocComment;
 
-	function recurseNodes(nodes: readonly DocNode[] | undefined): string | null {
-		if (!nodes) {
+	function recurseNodes(node: DocNode | undefined): string | null {
+		if (!node) {
 			return null;
 		}
 
-		for (const node of nodes) {
-			switch (node.kind) {
-				case 'Paragraph':
-					return recurseNodes((node as DocParagraph).nodes);
-				case 'PlainText':
-					return (node as DocPlainText).text;
-				default:
-					return null;
-			}
+		switch (node.kind) {
+			case 'Paragraph':
+				return recurseNodes(node as DocParagraph);
+			case 'PlainText':
+				return (node as DocPlainText).text;
+			default:
+				return null;
 		}
-
-		return null;
 	}
 
-	return recurseNodes(summarySection.nodes);
+	return recurseNodes(summarySection);
 }
 
 export function findReferences(model: ApiModel, excerpt: Excerpt) {
@@ -107,6 +104,7 @@ export function findReferences(model: ApiModel, excerpt: Excerpt) {
 
 				break;
 			}
+
 			default:
 				break;
 		}
@@ -142,16 +140,16 @@ export function getProperties(item: ApiItem) {
 }
 
 export interface TokenDocumentation {
-	text: string;
-	path: string | null;
 	kind: string;
+	path: string | null;
+	text: string;
 }
 
 export interface ParameterDocumentation {
-	name: string;
 	isOptional: boolean;
-	tokens: TokenDocumentation[];
+	name: string;
 	paramCommentBlock: DocBlockJSON | null;
+	tokens: TokenDocumentation[];
 }
 
 function createDapiTypesURL(meaning: Meaning, name: string) {
@@ -174,7 +172,7 @@ export function genReference(item: ApiItem, version: string) {
 
 export function genToken(model: ApiModel, token: ExcerptToken, version: string) {
 	if (token.canonicalReference) {
-		// @ts-expect-error
+		// @ts-expect-error: Symbol is not publicly accessible
 		token.canonicalReference._navigation = '.';
 	}
 

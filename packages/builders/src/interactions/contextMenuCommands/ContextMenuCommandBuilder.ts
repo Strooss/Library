@@ -3,8 +3,9 @@ import type {
 	LocaleString,
 	LocalizationMap,
 	Permissions,
-	RESTPostAPIApplicationCommandsJSONBody,
+	RESTPostAPIContextMenuApplicationCommandsJSONBody,
 } from 'discord-api-types/v10';
+import { validateLocale, validateLocalizationMap } from '../slashCommands/Assertions.js';
 import {
 	validateRequiredParameters,
 	validateName,
@@ -12,8 +13,7 @@ import {
 	validateDefaultPermission,
 	validateDefaultMemberPermissions,
 	validateDMPermission,
-} from './Assertions';
-import { validateLocale, validateLocalizationMap } from '../slashCommands/Assertions';
+} from './Assertions.js';
 
 export class ContextMenuCommandBuilder {
 	/**
@@ -81,10 +81,9 @@ export class ContextMenuCommandBuilder {
 	/**
 	 * Sets whether the command is enabled by default when the application is added to a guild.
 	 *
-	 * **Note**: If set to `false`, you will have to later `PUT` the permissions for this command.
-	 *
+	 * @remarks
+	 * If set to `false`, you will have to later `PUT` the permissions for this command.
 	 * @param value - Whether or not to enable this command by default
-	 *
 	 * @see https://discord.com/developers/docs/interactions/application-commands#permissions
 	 * @deprecated Use {@link ContextMenuCommandBuilder.setDefaultMemberPermissions} or {@link ContextMenuCommandBuilder.setDMPermission} instead.
 	 */
@@ -100,10 +99,9 @@ export class ContextMenuCommandBuilder {
 	/**
 	 * Sets the default permissions a member should have in order to run the command.
 	 *
-	 * **Note:** You can set this to `'0'` to disable the command by default.
-	 *
+	 * @remarks
+	 * You can set this to `'0'` to disable the command by default.
 	 * @param permissions - The permissions bit field to set
-	 *
 	 * @see https://discord.com/developers/docs/interactions/application-commands#permissions
 	 */
 	public setDefaultMemberPermissions(permissions: Permissions | bigint | number | null | undefined) {
@@ -120,7 +118,6 @@ export class ContextMenuCommandBuilder {
 	 * By default, commands are visible.
 	 *
 	 * @param enabled - If the command should be enabled in DMs
-	 *
 	 * @see https://discord.com/developers/docs/interactions/application-commands#permissions
 	 */
 	public setDMPermission(enabled: boolean | null | undefined) {
@@ -169,18 +166,19 @@ export class ContextMenuCommandBuilder {
 
 		Reflect.set(this, 'name_localizations', {});
 
-		Object.entries(localizedNames).forEach((args) =>
-			this.setNameLocalization(...(args as [LocaleString, string | null])),
-		);
+		for (const args of Object.entries(localizedNames))
+			this.setNameLocalization(...(args as [LocaleString, string | null]));
 		return this;
 	}
 
 	/**
 	 * Returns the final data that should be sent to Discord.
 	 *
-	 * **Note:** Calling this function will validate required properties based on their conditions.
+	 * @remarks
+	 * This method runs validations on the data before serializing it.
+	 * As such, it may throw an error if the data is invalid.
 	 */
-	public toJSON(): RESTPostAPIApplicationCommandsJSONBody {
+	public toJSON(): RESTPostAPIContextMenuApplicationCommandsJSONBody {
 		validateRequiredParameters(this.name, this.type);
 
 		validateLocalizationMap(this.name_localizations);
@@ -189,4 +187,4 @@ export class ContextMenuCommandBuilder {
 	}
 }
 
-export type ContextMenuCommandType = ApplicationCommandType.User | ApplicationCommandType.Message;
+export type ContextMenuCommandType = ApplicationCommandType.Message | ApplicationCommandType.User;
