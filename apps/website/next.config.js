@@ -1,17 +1,17 @@
 /* eslint-disable tsdoc/syntax */
-import { URL, fileURLToPath } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
 /**
  * @type {import('next').NextConfig}
  */
 export default {
 	reactStrictMode: true,
-	swcMinify: true,
 	eslint: {
 		ignoreDuringBuilds: true,
 	},
 	cleanDistDir: true,
 	experimental: {
+		appDir: true,
 		outputFileTracingRoot: fileURLToPath(new URL('../../', import.meta.url)),
 		fallbackNodePolyfills: false,
 	},

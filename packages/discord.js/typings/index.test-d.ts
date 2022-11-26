@@ -148,6 +148,10 @@ import {
   RoleSelectMenuInteraction,
   ChannelSelectMenuInteraction,
   MentionableSelectMenuInteraction,
+  MessageMentions,
+  AutoModerationActionExecution,
+  AutoModerationRule,
+  AutoModerationRuleManager,
 } from '.';
 import { expectAssignable, expectNotAssignable, expectNotType, expectType } from 'tsd';
 import type { ContextMenuCommandBuilder, SlashCommandBuilder } from '@discordjs/builders';
@@ -174,8 +178,17 @@ const testUserId = '987654321098765432'; // example id
 const globalCommandId = '123456789012345678'; // example id
 const guildCommandId = '234567890123456789'; // example id
 
-declare const slashCommandBuilder: SlashCommandBuilder;
-declare const contextMenuCommandBuilder: ContextMenuCommandBuilder;
+client.on('autoModerationActionExecution', autoModerationActionExecution =>
+  expectType<AutoModerationActionExecution>(autoModerationActionExecution),
+);
+
+client.on('autoModerationRuleCreate', ({ client }) => expectType<Client<true>>(client));
+client.on('autoModerationRuleDelete', ({ client }) => expectType<Client<true>>(client));
+
+client.on('autoModerationRuleUpdate', (oldAutoModerationRule, { client: newClient }) => {
+  expectType<Client<true>>(oldAutoModerationRule!.client);
+  expectType<Client<true>>(newClient);
+});
 
 client.on('channelCreate', ({ client }) => expectType<Client<true>>(client));
 client.on('channelDelete', ({ client }) => expectType<Client<true>>(client));
@@ -349,6 +362,10 @@ client.on('messageCreate', async message => {
     expectType<GuildTextBasedChannel>(message.channel);
     expectType<Guild>(message.guild);
     expectType<GuildMember | null>(message.member);
+
+    expectType<MessageMentions<true>>(message.mentions);
+    expectType<Guild>(message.guild);
+    expectType<Collection<Snowflake, GuildMember>>(message.mentions.members);
   }
 
   expectType<TextBasedChannel>(message.channel);
@@ -555,6 +572,9 @@ client.on('presenceUpdate', (oldPresence, { client }) => {
   expectType<Client<true>>(oldPresence!.client);
   expectType<Client<true>>(client);
 });
+
+declare const slashCommandBuilder: SlashCommandBuilder;
+declare const contextMenuCommandBuilder: ContextMenuCommandBuilder;
 
 client.on('ready', async client => {
   expectType<Client<true>>(client);
@@ -1362,6 +1382,26 @@ declare const applicationSubGroupCommandData: ApplicationCommandSubGroupData;
   expectType<ApplicationCommandSubCommandData[] | undefined>(applicationSubGroupCommandData.options);
 }
 
+declare const autoModerationRuleManager: AutoModerationRuleManager;
+{
+  expectType<Promise<AutoModerationRule>>(autoModerationRuleManager.fetch('1234567890'));
+  expectType<Promise<AutoModerationRule>>(autoModerationRuleManager.fetch({ autoModerationRule: '1234567890' }));
+  expectType<Promise<AutoModerationRule>>(
+    autoModerationRuleManager.fetch({ autoModerationRule: '1234567890', cache: false }),
+  );
+  expectType<Promise<AutoModerationRule>>(
+    autoModerationRuleManager.fetch({ autoModerationRule: '1234567890', force: true }),
+  );
+  expectType<Promise<AutoModerationRule>>(
+    autoModerationRuleManager.fetch({ autoModerationRule: '1234567890', cache: false, force: true }),
+  );
+  expectType<Promise<Collection<Snowflake, AutoModerationRule>>>(autoModerationRuleManager.fetch());
+  expectType<Promise<Collection<Snowflake, AutoModerationRule>>>(autoModerationRuleManager.fetch({}));
+  expectType<Promise<Collection<Snowflake, AutoModerationRule>>>(autoModerationRuleManager.fetch({ cache: false }));
+  // @ts-expect-error The `force` option cannot be used alongside fetching all auto moderation rules.
+  autoModerationRuleManager.fetch({ force: false });
+}
+
 declare const guildApplicationCommandManager: GuildApplicationCommandManager;
 expectType<Promise<Collection<Snowflake, ApplicationCommand>>>(guildApplicationCommandManager.fetch());
 expectType<Promise<Collection<Snowflake, ApplicationCommand>>>(guildApplicationCommandManager.fetch(undefined, {}));
@@ -1425,6 +1465,10 @@ declare const guildChannelManager: GuildChannelManager;
   expectType<null>(message.guild);
   expectType<null>(message.guildId);
   expectType<TextBasedChannel>(message.channel.messages.channel);
+
+  expectType<MessageMentions<false>>(message.mentions);
+  expectType<null>(message.mentions.guild);
+  expectType<null>(message.mentions.members);
 }
 
 declare const guildForumThreadManager: GuildForumThreadManager;
